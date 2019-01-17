@@ -38,7 +38,7 @@ public class SendTask extends AsyncTask<float[], Void, Boolean> {
 
     @Override
     protected Boolean doInBackground(float[]... floats) {
-        Log.d("execute", "doInBG");
+        //Log.d("execute", "doInBG");
         try {
             if (client_socket == null) {
                 client_socket = MainActivity.client_socket;
