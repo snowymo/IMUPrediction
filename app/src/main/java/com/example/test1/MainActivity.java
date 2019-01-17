@@ -2,6 +2,7 @@ package com.example.test1;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.os.Bundle;
 
 import android.hardware.Sensor;
@@ -11,6 +12,8 @@ import android.hardware.SensorEventListener;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
+import android.widget.CompoundButton;
+import android.widget.Switch;
 import android.widget.TextView;
 
 import java.io.IOException;
@@ -31,7 +34,7 @@ import java.nio.*;
 import static com.example.test1.R.*;
 
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener, TextWatcher, CompoundButton.OnCheckedChangeListener {
 
     private TextView duration, curT, gyroX, gyroY, gyroZ;
     private Sensor myGyroscope;
@@ -39,9 +42,12 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     private double timestamp;// in ms
 
     private TextView ipaddress;
+    private Switch udpSwitch;
 
-    public static DatagramSocket client_socket;
+    public static float[] gyros;
+
     public static InetAddress IPAddress;
+    Intent bgService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,38 +71,19 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gyroX = (TextView) findViewById(id.gyroX);
         gyroY = (TextView) findViewById(id.gyroY);
         gyroZ = (TextView) findViewById(id.gyroZ);
+
         ipaddress = (TextView) findViewById(id.ipaddress);
         ipaddress.setText("216.165.71.242");
+        ipaddress.addTextChangedListener(this);
 
-        ipaddress.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        udpSwitch = findViewById(id.udpSwitch);
+        udpSwitch.setOnCheckedChangeListener(this);
 
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                try {
-                    Log.d("ip",s.toString());
-                    IPAddress = InetAddress.getByName(s.toString());
-                } catch (UnknownHostException e) {
-                    e.printStackTrace();
-                }
-            }
-        });
+        gyros = new float[3];
+        bgService = new Intent(this, BGService.class);
 
         try {
             IPAddress = InetAddress.getByName(ipaddress.getText().toString());
-            if (client_socket == null) {
-                client_socket = new DatagramSocket(12345);
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -108,13 +95,17 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gyroX.setText("X: " + event.values[0]);
         gyroY.setText("Y: " + event.values[1]);
         gyroZ.setText("Z: " + event.values[2]);
+        gyros[0] = event.values[0];
+        gyros[1] = event.values[1];
+        gyros[2] = event.values[2];
 
         duration.setText("duration: " + ((double) event.timestamp / 1000000000 - timestamp) + "ms");
         timestamp = (double) event.timestamp / 1000000000;
 
         showCurrentDateTime(event.timestamp);
 
-        new SendTask().execute(event.values);
+        //if(udpSwitch.isChecked())
+        //new SendTask().execute(event.values);
     }
 
     private void showCurrentDateTime(long ts) {
@@ -141,10 +132,45 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     protected void onStop() {
-        if (client_socket != null)
-            client_socket.close();
+//        if (client_socket != null)
+//            client_socket.close();
 
         super.onStop();
         getDelegate().onStop();
+    }
+
+    @Override
+    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+    }
+
+    @Override
+    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+    }
+
+    @Override
+    public void afterTextChanged(Editable s) {
+        try {
+            Log.d("ip",s.toString());
+            IPAddress = InetAddress.getByName(s.toString());
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
+        if(isChecked){
+            // sending
+            Log.d("switch","startService");
+            startService(bgService );
+            //startService(new Intent(String.valueOf(BGService.class)));
+        }
+        else{
+            // close connection
+            Log.d("switch","stopService");
+            stopService(bgService );
+        }
     }
 }

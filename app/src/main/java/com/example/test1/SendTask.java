@@ -38,13 +38,13 @@ public class SendTask extends AsyncTask<float[], Void, Boolean> {
 
     @Override
     protected Boolean doInBackground(float[]... floats) {
-        Log.d("execute", "doInBG");
+
         try {
             if (client_socket == null) {
-                client_socket = MainActivity.client_socket;
-                IPAddress = MainActivity.IPAddress;
+                Log.d("execute", "client_socket=null");
+                client_socket = BGService.client_socket;
             }
-
+            IPAddress = MainActivity.IPAddress;
             DatagramPacket send_packet = new DatagramPacket(encode(floats[0]), floats[0].length * 4, IPAddress, 12345);
             client_socket.send(send_packet);
         } catch (UnknownHostException e) {
