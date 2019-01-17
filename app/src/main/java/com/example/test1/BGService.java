@@ -11,6 +11,7 @@ import android.util.Log;
 
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.SocketException;
 
 import androidx.annotation.Nullable;
 
@@ -20,8 +21,10 @@ public class BGService extends Service implements SensorEventListener {
     private SensorManager SM;
     private double timestamp;// in ms
 
-    public static DatagramSocket client_socket;
     public static InetAddress IPAddress;
+    public static DatagramSocket client_socket;
+
+    boolean isStop;
 
     @Nullable
     @Override
@@ -39,13 +42,17 @@ public class BGService extends Service implements SensorEventListener {
 
     @Override
     public void onDestroy() {
+        isStop = true;
         super.onDestroy();
     }
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        Log.d("service", "onSensorChanged");
-        new SendTask().execute(event.values);
+
+        if(!isStop) {
+            new SendTask().execute(event.values);
+            Log.d("service", "onSensorChanged");
+        }
     }
 
     @Override
@@ -56,6 +63,7 @@ public class BGService extends Service implements SensorEventListener {
     @Override
     public void onCreate(){
         Log.d("service", "onCreate");
+        isStop = false;
         // Create our Sensor Manager
         SM = (SensorManager) getSystemService(SENSOR_SERVICE);
         // Accelerometer Sensor
@@ -63,6 +71,12 @@ public class BGService extends Service implements SensorEventListener {
 
         // Register sensor Listener
         SM.registerListener(this, myGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
-
+        if (client_socket == null) {
+            try {
+                client_socket = new DatagramSocket(12345);
+            } catch (SocketException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

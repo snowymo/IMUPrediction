@@ -46,8 +46,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     public static float[] gyros;
 
-    public static DatagramSocket client_socket;
     public static InetAddress IPAddress;
+    Intent bgService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -80,14 +80,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         udpSwitch.setOnCheckedChangeListener(this);
 
         gyros = new float[3];
+        bgService = new Intent(this, BGService.class);
 
         try {
             IPAddress = InetAddress.getByName(ipaddress.getText().toString());
-            if (client_socket == null) {
-                client_socket = new DatagramSocket(12345);
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -109,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         showCurrentDateTime(event.timestamp);
 
         //if(udpSwitch.isChecked())
-        new SendTask().execute(event.values);
+        //new SendTask().execute(event.values);
     }
 
     private void showCurrentDateTime(long ts) {
@@ -136,8 +132,8 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     protected void onStop() {
-        if (client_socket != null)
-            client_socket.close();
+//        if (client_socket != null)
+//            client_socket.close();
 
         super.onStop();
         getDelegate().onStop();
@@ -167,11 +163,14 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
     public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
         if(isChecked){
             // sending
-            startService(new Intent(this.getApplicationContext(), BGService.class));
+            Log.d("switch","startService");
+            startService(bgService );
+            //startService(new Intent(String.valueOf(BGService.class)));
         }
         else{
             // close connection
-            stopService(new Intent(this, BGService.class));
+            Log.d("switch","stopService");
+            stopService(bgService );
         }
     }
 }
