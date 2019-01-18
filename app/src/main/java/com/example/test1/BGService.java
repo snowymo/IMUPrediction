@@ -74,6 +74,7 @@ public class BGService extends Service implements SensorEventListener {
                 data[6] = event.values[3];
             }
         }
+        data[7] = (float) event.timestamp / 1000000000;
     }
 
     @Override
@@ -84,7 +85,7 @@ public class BGService extends Service implements SensorEventListener {
     @Override
     public void onCreate(){
         Log.d("service", "onCreate");
-        data = new float[7];
+        data = new float[8];
         isStop = false;
         // Create our Sensor Manager
         SM = (SensorManager) getSystemService(SENSOR_SERVICE);
