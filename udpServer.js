@@ -13,6 +13,13 @@ var history_length = 100;
 var lag = 0.030;
 var predictions = [];
 
+// take ip as the input
+var argv = require('minimist')(process.argv.slice(2));
+if('ip' in argv)
+	HOST = argv['ip'];
+console.log(argv);
+console.log("host:" + HOST);
+
 // returns result of polynomial function
 var poly = function (coeffs, x) {
     var res = 0;
