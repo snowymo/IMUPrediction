@@ -6,19 +6,22 @@ var HOST = '216.165.71.223';
 
 var dgram = require('dgram');
 var server = dgram.createSocket('udp4');
+var Quaternion = require('quaternion');
 
-var rot_history = [];
+var q = new Quaternion(1,0,0,0);
+
+var rot_history = [], euler_history = [];
 var history_length = 100;
 // how far ahead we are trying to predict, in seconds
 var lag = 0.030;
-var predictions = [];
+var predictions = [], predictEuler = [];
 
 // take ip as the input
 var argv = require('minimist')(process.argv.slice(2));
 if('ip' in argv)
 	HOST = argv['ip'];
-console.log(argv);
-console.log("host:" + HOST);
+//console.log(argv);
+//console.log("host:" + HOST);
 
 // returns result of polynomial function
 var poly = function (coeffs, x) {
@@ -49,27 +52,49 @@ var quatangle = function (q) {
     return 2 * Math.acos(Math.abs(Math.min(Math.max(q[3], -1), 1)));
 }
 
+var quatangle2 = function (q) {
+    return 2 * Math.acos(Math.abs(Math.min(Math.max(q[0], -1), 1)));
+}
+
 server.on('listening', function () {
     var address = server.address();
     console.log('UDP Server listening on ' + address.address + ":" + address.port);
 });
 
-server.on('message', function (message, remote) {
-    //console.log(remote.address + ':' + remote.port);
-	var gyrox = message.readFloatBE(0);
-	var gyroy = message.readFloatBE(4);
-	var gyroz = message.readFloatBE(8);
-    //console.log("gyro:(" + gyrox + "," + gyroy + "," + gyroz + ")");
-    var rotx = message.readFloatBE(12);
-    var roty = message.readFloatBE(16);
-    var rotz = message.readFloatBE(20);
-    var rotw = message.readFloatBE(24);
-    //console.log("rot:(" + rotx + "," + roty + "," + rotz + "," + rotw + ")");
+//where the airplane first does yaw turn during taxiing onto the runway, then pitches during take-off, and finally rolls in the air.
+// order: z-y-x in android coordinate system
+var toEuler = function (qx, qy, qz, qw){
+	// roll (x-axis rotation)// z axis here
+	var sinr_cosp = +2.0 * (qw * qx + qy * qz);
+	var cosr_cosp = +1.0 - 2.0 * (qx * qx + qy * qy);
+	roll = Math.atan2(sinr_cosp, cosr_cosp);
 
-    var time = message.readFloatBE(28);
-    //console.log(time);
-    rot_history.push([time, rotx, roty, rotz, rotw]);
-    if (rot_history.length > history_length) {
+	// pitch (y-axis rotation)// y here
+	var sinp = +2.0 * (qw * qy - qz * qx);
+	if (Math.abs(sinp) >= 1){
+		pitch = sinp >= 0 ? Math.PI / 2 : -M_PI/2; // use 90 degrees if out of range
+	}
+	else
+		pitch = Math.asin(sinp);
+
+	// yaw (z-axis rotation) // x here
+	var siny_cosp = +2.0 * (qw * qz + qx * qy);
+	var cosy_cosp = +1.0 - 2.0 * (qy * qy + qz * qz);  
+	yaw = Math.atan2(siny_cosp, cosy_cosp);
+	
+	var qDebug = Quaternion.fromEuler(yaw,roll, pitch,  'ZYX');
+	//console.log("yaw:" + yaw  + "\troll" + roll+ "\tpitch:" + pitch);
+	//console.log("qDebug:" + qDebug);	
+	return [radian2degree(yaw), radian2degree(roll), radian2degree(pitch)];
+}
+
+var radian2degree = function(r){
+	return r * 180 / Math.PI;
+}
+
+var predictByQuaternion = function (time, rotx, roty, rotz, rotw){
+	rot_history.push([time, rotx, roty, rotz, rotw]);
+	if (rot_history.length > history_length) {
         var prediction = [0, 0, 0, 1]
         for (var i = 1; i < 5; i++) {
             rot_history.splice(0, i);
@@ -82,8 +107,8 @@ server.on('message', function (message, remote) {
         //console.log(next_val, coeffs);
         predictions.push([time + lag, prediction]);
     }
-
-    var smallest_diff = 100;
+	
+	var smallest_diff = 100;
     var error = 0;
     var p = [0, 0, 0, 1];
     for (var i = 0; i < predictions.length; i++) {
@@ -104,6 +129,95 @@ server.on('message', function (message, remote) {
     }
     var error_angle = quatangle(mulquat(p, conj([rotx, roty, rotz, rotw]))) * 180 / Math.PI;
     console.log(error_angle.toFixed(5) + " predict: (" + p[0].toFixed(5), p[1].toFixed(5), p[2].toFixed(5), p[3].toFixed(5) + "), real: (" + rotx.toFixed(5), roty.toFixed(5), rotz.toFixed(5), rotw.toFixed(5) + ")");
+}
+
+var norm = function (v){
+	//console.log(v);
+	return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+}
+
+var predictByEuler = function(time, rotx, roty, rotz, rotw){
+	eulerAngles = toEuler(rotx, roty, rotz, rotw);
+	//console.log("euler:" + eulerAngles);
+	euler_history.push([time,eulerAngles[0], eulerAngles[1], eulerAngles[2]]);
+	if (euler_history.length > history_length) {
+        var prediction = [0, 0, 0]
+        for (var i = 1; i < 4; i++) {
+            euler_history.splice(0, i);
+            var x_vals = euler_history.map(a => [a[0] - euler_history[0][0], a[i]]);
+            var coeffs = regression.polynomial(x_vals, { order: 3, precision: 10 }).equation;
+            var next_time = x_vals[x_vals.length - 1][0] + lag;
+            var next_val = poly(coeffs, next_time);
+            predictEuler[i - 1] = next_val;
+        }
+        //console.log(next_val, coeffs);
+        predictEuler.push([time + lag, predictEuler]);
+    }
+	
+	var smallest_diff = 100;
+    var error = Quaternion.ZERO;
+	var err = 0;
+    var p = [0, 0, 0, 0];
+	var predictEulerAngles = [0,0,0];
+    for (var i = 0; i < predictEuler.length; i++) {
+        var diff = Math.abs(predictEuler[i][0] - time);
+        if (diff < smallest_diff) {
+            smallest_diff = diff;
+            var x = predictEuler[i][1][0];
+            var y = predictEuler[i][1][1];
+            var z = predictEuler[i][1][2];
+			// turn to quaternion 
+			var rx = x * Math.PI / 180;
+			var ry = y * Math.PI / 180;
+			var rz = z * Math.PI / 180;
+			var qPredict = Quaternion.fromEuler(rx, ry, rx);
+			var qReal = new Quaternion(rotw, rotx, roty, rotz);
+			error = qReal.div(qPredict);
+			
+			//console.log("predict euler",x,y,z);
+			//console.log("predict euler radian", rx,ry,rz);
+			//console.log("qPredict quaternion:" + qPredict);
+			//qPredict = Quaternion.fromEuler(x, y, z, 'ZYX');
+			//console.log("qPredict:" + qPredict.toString());
+			//console.log("qReal:" + qReal.toString());
+            p = qPredict.toVector();//w,x,y,z
+			predictEulerAngles[0] = x;
+			predictEulerAngles[1] = y;
+			predictEulerAngles[2] = z;
+			// the above calcualtion is wrong so I only sum them up for now
+			err = [eulerAngles[0] - predictEulerAngles[0],
+			eulerAngles[1] - predictEulerAngles[1],
+			eulerAngles[2] - predictEulerAngles[2]];
+        }
+    }
+	//console.log("error", error);
+    var error_angle = quatangle2(error.toVector()) * 180 / Math.PI;
+     console.log(norm(err).toFixed(5) + " predict: (" + predictEulerAngles[0].toFixed(5), 
+	predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "), real: (" + eulerAngles[0].toFixed(5), 
+	eulerAngles[1].toFixed(5), eulerAngles[2].toFixed(5)+ ")"); 
+}
+
+server.on('message', function (message, remote) {
+    //console.log(remote.address + ':' + remote.port);
+	var gyrox = message.readFloatBE(0);
+	var gyroy = message.readFloatBE(4);
+	var gyroz = message.readFloatBE(8);
+    //console.log("gyro:(" + gyrox + "," + gyroy + "," + gyroz + ")");
+    var rotx = message.readFloatBE(12);
+    var roty = message.readFloatBE(16);
+    var rotz = message.readFloatBE(20);
+    var rotw = message.readFloatBE(24);
+    //console.log("rot:(" + rotx + "," + roty + "," + rotz + "," + rotw + ")");
+	// preprocess: convert to euler angle
+	
+
+    var time = message.readFloatBE(28);
+    //console.log(time);
+	// test with quaternion	
+	//predictByQuaternion(time, rotx, roty, rotz, rotw);
+	// test with eulerAngles
+	predictByEuler(time, rotx, roty, rotz, rotw);
+    
 });
 
 server.bind(PORT, HOST);

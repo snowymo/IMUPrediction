@@ -8,6 +8,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
 import android.os.IBinder;
+import android.renderscript.Matrix4f;
 import android.util.Log;
 
 import java.net.DatagramSocket;
@@ -17,6 +18,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 import androidx.annotation.Nullable;
+
+import static java.lang.Math.sqrt;
 
 public class BGService extends Service implements SensorEventListener {
 
@@ -72,6 +75,16 @@ public class BGService extends Service implements SensorEventListener {
                 data[4] = event.values[1];
                 data[5] = event.values[2];
                 data[6] = event.values[3];
+                // debug
+//                float[] mRotationMatrix = new float[16];
+//                mRotationMatrix[ 0] = 1;
+//                mRotationMatrix[ 4] = 1;
+//                mRotationMatrix[ 8] = 1;
+//                mRotationMatrix[12] = 1;
+//                Log.d("event.value", String.valueOf(event.values[0]));
+//                SensorManager.getRotationMatrixFromVector(
+//                        mRotationMatrix , event.values);
+//                Matrix2Quaternion(mRotationMatrix);
             }
         }
         data[7] = (float) event.timestamp / 1000000000;
@@ -80,6 +93,41 @@ public class BGService extends Service implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) {
 
+    }
+
+     void Matrix2Quaternion(float[] m){
+         double tr = m[0] + m[1*4+1] + m[2*4+2];
+        double qw,qx,qy,qz;
+        double m00 = m[0], m01 = m[1], m10 = m[1*4], m11 = m[1*4+1],
+                m02 = m[2], m20 = m[2*4], m22 = m[2*4+2], m21 = m[2*4+1], m12 = m[1*4+2];
+         //float[] marray = m.getArray();
+
+         if (tr > 0) {
+            double S = sqrt(tr+1.0) * 2; // S=4*qw
+            qw = 0.25 * S;
+            qx = (m21 - m12) / S;
+            qy = (m02 - m20) / S;
+            qz = (m10 - m01) / S;
+        } else if ((m00 > m11)&(m00 > m22)) {
+            double S = sqrt(1.0 + m00 - m11 - m22) * 2; // S=4*qx
+            qw = (m21 - m12) / S;
+            qx = 0.25 * S;
+            qy = (m01 + m10) / S;
+            qz = (m02 + m20) / S;
+        } else if (m11 > m22) {
+             double S = sqrt(1.0 + m11 - m00 - m22) * 2; // S=4*qy
+            qw = (m02 - m20) / S;
+            qx = (m01 + m10) / S;
+            qy = 0.25 * S;
+            qz = (m12 + m21) / S;
+        } else {
+             double S = sqrt(1.0 + m22 - m00 - m11) * 2; // S=4*qz
+            qw = (m10 - m01) / S;
+            qx = (m02 + m20) / S;
+            qy = (m12 + m21) / S;
+            qz = 0.25 * S;
+        }
+        Log.d("quaternion", "qw:" + qw + "\tqx" + qx);
     }
 
     @Override
