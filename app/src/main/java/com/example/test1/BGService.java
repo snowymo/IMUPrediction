@@ -119,8 +119,9 @@ public class BGService extends Service implements SensorEventListener {
 
         @Override
         public void run() {
-            // run on another thread
-            mHandler.post(new Runnable() {
+            if(!isStop)
+                // run on another thread
+                mHandler.post(new Runnable() {
 
                 @Override
                 public void run() {
