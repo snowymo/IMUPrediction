@@ -27,7 +27,7 @@ public class BGService extends Service implements SensorEventListener {
     private SensorManager SM;
     private double timestamp;// in ms
 
-    private static final double SEND_RATE = 1.0 / 100.0;
+    private static final double SEND_RATE = 1.0 / 400.0;
 
     private float[] data;
 
