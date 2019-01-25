@@ -25,6 +25,8 @@ if('ip' in argv)
 
 var THREE = require('three');
 
+var last_time = 0;
+
 // returns result of polynomial function
 var poly = function (coeffs, x) {
     var res = 0;
@@ -49,13 +51,17 @@ var conj = function (q) {
     return [-q[0], -q[1], -q[2], q[3]];
 }
 
+var clamp = function (x, min, max) {
+    return Math.min(Math.max(x, min), max);
+}
+
 // gets the angle represented by a quaternion (independent of rotation axis)
 var quatangle = function (q) {
-    return 2 * Math.acos(Math.abs(Math.min(Math.max(q[3], -1), 1)));
+    return 2 * Math.acos(clamp(q[3], -1, 1));
 }
 
 var quatangle2 = function (q) {
-    return 2 * Math.acos(Math.abs(Math.min(Math.max(q[0], -1), 1)));
+    return 2 * Math.acos(clamp(q[0], -1, 1));
 }
 
 server.on('listening', function () {
@@ -143,33 +149,33 @@ var norm = function (v){
 	return Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
-var predictByEuler = function(time, rotx, roty, rotz, rotw){
-	eulerAngles = toEuler2(rotx, roty, rotz, rotw);
+var lerp = function (a, b, t) {
+    return a * (1 - t) + b * t;
+}
+
+var predictByEuler = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz){
+    eulerAngles = toEuler2(rotx, roty, rotz, rotw);
+    var alpha = clamp(norm([gyrox, gyroy, gyroz]), 0, 1);
 	//console.log("euler:" + eulerAngles);
 	//console.log("euler_history:" + euler_history);
 	euler_history.push([time,eulerAngles.x, eulerAngles.y, eulerAngles.z]);
-	if (euler_history.length > history_length) {
+    if (euler_history.length > history_length) {
+        var realEuler = euler_history[euler_history.length - 1].slice(1);
         var predictEuler = [0, 0, 0];
         euler_history.splice(0, 1);
         for (var i = 1; i < 4; i++) {
             var x_vals = euler_history.map(a => [a[0] - euler_history[0][0], a[i]]);
-			//console.log("x_vals:" + x_vals);
+			//console.log(x_vals);
             var coeffs = regression.polynomial(x_vals, { order: 2, precision: 10 }).equation;
 			//console.log("coeffs:" + coeffs);
             var next_time = x_vals[x_vals.length - 1][0] + lag;
 			//console.log("next_time:" + next_time);
             var next_val = poly(coeffs, next_time);
-			//console.log("next_val:" + next_val);
-			if(isNaN(coeffs[0]) ){
-				next_val[0] = eulerAngles.x;
-			}
-			if(isNaN(coeffs[1])){
-				next_val[1] = eulerAngles.y;
-			}
-			if(isNaN(coeffs[2])){
-				next_val[2] = eulerAngles.z;
-			}
-            predictEuler[i - 1] = next_val;
+            if (isNaN(coeffs[0]) || isNaN(coeffs[1]) || isNaN(coeffs[2])){
+                next_val = realEuler[i - 1];
+            }
+            //console.log("next_val:" + next_val);
+            predictEuler[i - 1] = lerp(realEuler[i - 1], next_val, alpha);
         }
         //console.log(next_val, coeffs);
         predictsEuler.push([time + lag, predictEuler]);
@@ -213,7 +219,7 @@ var predictByEuler = function(time, rotx, roty, rotz, rotw){
     }
 	//console.log("error", error);
     var error_angle = quatangle2(error.toVector()) * 180 / Math.PI;
-     console.log(norm(err).toFixed(5) + "\t" + time + "\t" + predictEulerAngles[0].toFixed(5), predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "\t" + eulerAngles.x.toFixed(5), eulerAngles.y.toFixed(5), eulerAngles.z.toFixed(5)); 
+    console.log((norm(err) * 180 / Math.PI).toFixed(5) + "\t" + time + "\t" + predictEulerAngles[0].toFixed(5), predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "\t" + eulerAngles.x.toFixed(5), eulerAngles.y.toFixed(5), eulerAngles.z.toFixed(5)); 
 }
 
 server.on('message', function (message, remote) {
@@ -231,11 +237,14 @@ server.on('message', function (message, remote) {
 	
 
     var time = message.readFloatBE(28);
-    //console.log(time);
-	// test with quaternion	
-	//predictByQuaternion(time, rotx, roty, rotz, rotw);
-	// test with eulerAngles
-	predictByEuler(time, rotx, roty, rotz, rotw);
+    if (time != last_time) {
+        //console.log(time);
+        // test with quaternion	
+        //predictByQuaternion(time, rotx, roty, rotz, rotw);
+        // test with eulerAngles
+        predictByEuler(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz);
+        last_time = time;
+    }
     
 });
 
