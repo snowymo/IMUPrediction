@@ -1,4 +1,4 @@
-require('log-timestamp');
+//require('log-timestamp');
 var regression = require('regression');
 
 var PORT = 12345;
@@ -11,10 +11,10 @@ var Quaternion = require('quaternion');
 var q = new Quaternion(1,0,0,0);
 
 var rot_history = [], euler_history = [];
-var history_length = 100;
+var history_length = 15;//200 samples/s * 0.03s
 // how far ahead we are trying to predict, in seconds
 var lag = 0.030;
-var predictions = [], predictEuler = [];
+var predictions = [], predictsEuler = [];
 
 // take ip as the input
 var argv = require('minimist')(process.argv.slice(2));
@@ -22,6 +22,8 @@ if('ip' in argv)
 	HOST = argv['ip'];
 //console.log(argv);
 //console.log("host:" + HOST);
+
+var THREE = require('three');
 
 // returns result of polynomial function
 var poly = function (coeffs, x) {
@@ -88,6 +90,11 @@ var toEuler = function (qx, qy, qz, qw){
 	return [radian2degree(yaw), radian2degree(roll), radian2degree(pitch)];
 }
 
+var toEuler2 = function(qx,qy,qz,qw){
+	var e = new THREE.Euler().setFromQuaternion(new THREE.Quaternion(qx, qy, qz, qw), "ZYX");
+	return e;
+}
+
 var radian2degree = function(r){
 	return r * 180 / Math.PI;
 }
@@ -99,7 +106,7 @@ var predictByQuaternion = function (time, rotx, roty, rotz, rotw){
         for (var i = 1; i < 5; i++) {
             rot_history.splice(0, i);
             var x_vals = rot_history.map(a => [a[0] - rot_history[0][0], a[i]]);
-            var coeffs = regression.polynomial(x_vals, { order: 3, precision: 10 }).equation;
+            var coeffs = regression.polynomial(x_vals, { order: 4, precision: 10 }).equation;
             var next_time = x_vals[x_vals.length - 1][0] + lag;
             var next_val = poly(coeffs, next_time);
             prediction[i - 1] = next_val;
@@ -128,7 +135,7 @@ var predictByQuaternion = function (time, rotx, roty, rotz, rotw){
         }
     }
     var error_angle = quatangle(mulquat(p, conj([rotx, roty, rotz, rotw]))) * 180 / Math.PI;
-    console.log(error_angle.toFixed(5) + " predict: (" + p[0].toFixed(5), p[1].toFixed(5), p[2].toFixed(5), p[3].toFixed(5) + "), real: (" + rotx.toFixed(5), roty.toFixed(5), rotz.toFixed(5), rotw.toFixed(5) + ")");
+    //console.log(error_angle.toFixed(5) + " predict: (" + p[0].toFixed(5), p[1].toFixed(5), p[2].toFixed(5), p[3].toFixed(5) + "), real: (" + rotx.toFixed(5), roty.toFixed(5), rotz.toFixed(5), rotw.toFixed(5) + ")");
 }
 
 var norm = function (v){
@@ -137,35 +144,49 @@ var norm = function (v){
 }
 
 var predictByEuler = function(time, rotx, roty, rotz, rotw){
-	eulerAngles = toEuler(rotx, roty, rotz, rotw);
+	eulerAngles = toEuler2(rotx, roty, rotz, rotw);
 	//console.log("euler:" + eulerAngles);
-	euler_history.push([time,eulerAngles[0], eulerAngles[1], eulerAngles[2]]);
+	//console.log("euler_history:" + euler_history);
+	euler_history.push([time,eulerAngles.x, eulerAngles.y, eulerAngles.z]);
 	if (euler_history.length > history_length) {
-        var prediction = [0, 0, 0]
+        var predictEuler = [0, 0, 0]
         for (var i = 1; i < 4; i++) {
             euler_history.splice(0, i);
             var x_vals = euler_history.map(a => [a[0] - euler_history[0][0], a[i]]);
-            var coeffs = regression.polynomial(x_vals, { order: 3, precision: 10 }).equation;
+			//console.log("x_vals:" + x_vals);
+            var coeffs = regression.polynomial(x_vals, { order: 2, precision: 10 }).equation;
+			//console.log("coeffs:" + coeffs);
             var next_time = x_vals[x_vals.length - 1][0] + lag;
+			//console.log("next_time:" + next_time);
             var next_val = poly(coeffs, next_time);
+			//console.log("next_val:" + next_val);
+			if(isNaN(coeffs[0]) ){
+				next_val[0] = eulerAngles.x;
+			}
+			if(isNaN(coeffs[1])){
+				next_val[1] = eulerAngles.y;
+			}
+			if(isNaN(coeffs[2])){
+				next_val[2] = eulerAngles.z;
+			}
             predictEuler[i - 1] = next_val;
         }
         //console.log(next_val, coeffs);
-        predictEuler.push([time + lag, predictEuler]);
+        predictsEuler.push([time + lag, predictEuler]);
     }
 	
 	var smallest_diff = 100;
     var error = Quaternion.ZERO;
-	var err = 0;
+	var err = [0, 0, 0];
     var p = [0, 0, 0, 0];
 	var predictEulerAngles = [0,0,0];
-    for (var i = 0; i < predictEuler.length; i++) {
-        var diff = Math.abs(predictEuler[i][0] - time);
+    for (var i = 0; i < predictsEuler.length; i++) {
+        var diff = Math.abs(predictsEuler[i][0] - time);
         if (diff < smallest_diff) {
             smallest_diff = diff;
-            var x = predictEuler[i][1][0];
-            var y = predictEuler[i][1][1];
-            var z = predictEuler[i][1][2];
+            var x = predictsEuler[i][1][0];
+            var y = predictsEuler[i][1][1];
+            var z = predictsEuler[i][1][2];
 			// turn to quaternion 
 			var rx = x * Math.PI / 180;
 			var ry = y * Math.PI / 180;
@@ -185,16 +206,14 @@ var predictByEuler = function(time, rotx, roty, rotz, rotw){
 			predictEulerAngles[1] = y;
 			predictEulerAngles[2] = z;
 			// the above calcualtion is wrong so I only sum them up for now
-			err = [eulerAngles[0] - predictEulerAngles[0],
-			eulerAngles[1] - predictEulerAngles[1],
-			eulerAngles[2] - predictEulerAngles[2]];
+			err = [eulerAngles.x - predictEulerAngles[0],
+			eulerAngles.y - predictEulerAngles[1],
+			eulerAngles.z - predictEulerAngles[2]];
         }
     }
 	//console.log("error", error);
     var error_angle = quatangle2(error.toVector()) * 180 / Math.PI;
-     console.log(norm(err).toFixed(5) + " predict: (" + predictEulerAngles[0].toFixed(5), 
-	predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "), real: (" + eulerAngles[0].toFixed(5), 
-	eulerAngles[1].toFixed(5), eulerAngles[2].toFixed(5)+ ")"); 
+     console.log(norm(err).toFixed(5) + "\t" + time + "\t" + predictEulerAngles[0].toFixed(5), predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "\t" + eulerAngles.x.toFixed(5), eulerAngles.y.toFixed(5), eulerAngles.z.toFixed(5)); 
 }
 
 server.on('message', function (message, remote) {
