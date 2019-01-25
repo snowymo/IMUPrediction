@@ -149,9 +149,9 @@ var predictByEuler = function(time, rotx, roty, rotz, rotw){
 	//console.log("euler_history:" + euler_history);
 	euler_history.push([time,eulerAngles.x, eulerAngles.y, eulerAngles.z]);
 	if (euler_history.length > history_length) {
-        var predictEuler = [0, 0, 0]
+        var predictEuler = [0, 0, 0];
+        euler_history.splice(0, 1);
         for (var i = 1; i < 4; i++) {
-            euler_history.splice(0, i);
             var x_vals = euler_history.map(a => [a[0] - euler_history[0][0], a[i]]);
 			//console.log("x_vals:" + x_vals);
             var coeffs = regression.polynomial(x_vals, { order: 2, precision: 10 }).equation;
