@@ -10,11 +10,11 @@ var Quaternion = require('quaternion');
 
 var q = new Quaternion(1,0,0,0);
 
-var rot_history = [], euler_history = [];
+var rot_history = [], euler_history = [], gyro_history = [];
 var history_length = 15;//200 samples/s * 0.03s
 // how far ahead we are trying to predict, in seconds
 var lag = 0.030;
-var predictions = [], predictsEuler = [];
+var predictions = [], predictsEuler = [], predGyroList = [];
 
 // take ip as the input
 var argv = require('minimist')(process.argv.slice(2));
@@ -153,6 +153,13 @@ var lerp = function (a, b, t) {
     return a * (1 - t) + b * t;
 }
 
+var roundRadians = function(r){
+	if(r < -Math.PI)
+		r += 2 * Math.PI;
+	if(r > Math.PI)
+		r -= 2 * Math.PI;
+}
+
 var predictByEuler = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz){
     eulerAngles = toEuler2(rotx, roty, rotz, rotw);
     var alpha = clamp(norm([gyrox, gyroy, gyroz]), 0, 1);
@@ -174,6 +181,9 @@ var predictByEuler = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz)
             if (isNaN(coeffs[0]) || isNaN(coeffs[1]) || isNaN(coeffs[2])){
                 next_val = realEuler[i - 1];
             }
+			roundRadians(next_val[0]);
+			roundRadians(next_val[1]);
+			roundRadians(next_val[2]);
             //console.log("next_val:" + next_val);
             predictEuler[i - 1] = lerp(realEuler[i - 1], next_val, alpha);
         }
@@ -222,6 +232,62 @@ var predictByEuler = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz)
     console.log((norm(err) * 180 / Math.PI).toFixed(5) + "\t" + time + "\t" + predictEulerAngles[0].toFixed(5), predictEulerAngles[1].toFixed(5), predictEulerAngles[2].toFixed(5) + "\t" + eulerAngles.x.toFixed(5), eulerAngles.y.toFixed(5), eulerAngles.z.toFixed(5)); 
 }
 
+var predictByGyro = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz, m){
+    var alpha = clamp(norm([gyrox, gyroy, gyroz]), 0, 1);//?
+	gyro_history.push([time, gyrox, gyroy, gyroz]);
+    if (gyro_history.length > history_length) {
+        var realGyro = gyro_history[gyro_history.length - 1].slice(1);
+        var predictGyro = [0, 0, 0];
+        gyro_history.splice(0, 1);
+        for (var i = 1; i < 4; i++) {
+            var x_vals = gyro_history.map(a => [a[0] - gyro_history[0][0], a[i]]);
+			//console.log(x_vals);
+            var coeffs = regression.polynomial(x_vals, { order: 2, precision: 10 }).equation;
+			//console.log("coeffs:" + coeffs);
+            var next_time = x_vals[x_vals.length - 1][0] + lag;
+			//console.log("next_time:" + next_time);
+            var next_val = poly(coeffs, next_time);
+            if (isNaN(coeffs[0]) || isNaN(coeffs[1]) || isNaN(coeffs[2])){
+                next_val = realGyro[i - 1];
+            }
+            //console.log("next_val:" + next_val);
+            predictGyro[i - 1] = next_val;//lerp(realGyro[i - 1], next_val, alpha);
+        }
+        //console.log(next_val, coeffs);
+        predGyroList.push([time + lag, predictGyro]);
+    }
+	
+	var smallest_diff = 100;
+    var error = Quaternion.ZERO;
+	var err = [0, 0, 0];
+    var p = [0, 0, 0, 0];
+	var curPredictGyro = [0,0,0];
+    for (var i = 0; i < predGyroList.length; i++) {
+        var diff = Math.abs(predGyroList[i][0] - time);
+        if (diff < smallest_diff) {
+            smallest_diff = diff;
+            var x = predGyroList[i][1][0];
+            var y = predGyroList[i][1][1];
+            var z = predGyroList[i][1][2];
+			curPredictGyro = predGyroList[i][1];
+			
+			err = [curPredictGyro[0] - gyrox,
+			curPredictGyro[1] - gyroy,
+			curPredictGyro[2] - gyroz];
+        }
+    }
+    console.log((norm(err)).toFixed(5) + "\t" + time + "\t" + curPredictGyro[0].toFixed(5), curPredictGyro[1].toFixed(5), curPredictGyro[2].toFixed(5) + "\t" + gyrox.toFixed(5), gyroy.toFixed(5), gyroz.toFixed(5) + "\t"
+	+ m[0].toFixed(5) + "\t"
+	+ m[1].toFixed(5) + "\t"
+	+ m[2].toFixed(5) + "\t"
+	+ m[3].toFixed(5) + "\t"
+	+ m[4].toFixed(5) + "\t"
+	+ m[5].toFixed(5) + "\t"
+	+ m[6].toFixed(5) + "\t"
+	+ m[7].toFixed(5) + "\t"
+	+ m[8].toFixed(5)); 
+}
+
 server.on('message', function (message, remote) {
     //console.log(remote.address + ':' + remote.port);
 	var gyrox = message.readFloatBE(0);
@@ -234,15 +300,17 @@ server.on('message', function (message, remote) {
     var rotw = message.readFloatBE(24);
     //console.log("rot:(" + rotx + "," + roty + "," + rotz + "," + rotw + ")");
 	// preprocess: convert to euler angle
-	
 
     var time = message.readFloatBE(28);
+	var m = new Float32Array(9);
+	for(let i = 0; i < 9; i++)
+		m[i] = message.readFloatBE(32 + 4*i);
     if (time != last_time) {
         //console.log(time);
         // test with quaternion	
         //predictByQuaternion(time, rotx, roty, rotz, rotw);
         // test with eulerAngles
-        predictByEuler(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz);
+        predictByGyro(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz, m);
         last_time = time;
     }
     
