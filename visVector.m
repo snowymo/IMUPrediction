@@ -28,3 +28,5 @@ end
 pReal = plot3(real(1,:), real(2,:), real(3,:));
 pReal.Color = "green";
 hold off
+
+title('Plot of the Rotated Vector, red for prediction, green for ground truth')
