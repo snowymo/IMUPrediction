@@ -1,0 +1,3 @@
+[submodule "iPhoneSwiftSocket"]
+	path = iPhoneSwiftSocket
+	url = git@github.com:snowymo/IOSSocket.git

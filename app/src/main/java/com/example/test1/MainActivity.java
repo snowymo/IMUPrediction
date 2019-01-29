@@ -36,15 +36,15 @@ import static com.example.test1.R.*;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, TextWatcher, CompoundButton.OnCheckedChangeListener {
 
-    private TextView duration, curT, gyroX, gyroY, gyroZ;
-    private Sensor myGyroscope;
+    private TextView duration, curT, gyroX, gyroY, gyroZ, rotX, rotY, rotZ, rotW;
+    private Sensor myGyroscope, myRotation;
     private SensorManager SM;
     private double timestamp;// in ms
 
     private TextView ipaddress;
     private Switch udpSwitch;
 
-    public static float[] gyros;
+    public static float[] gyros, rot;
 
     public static InetAddress IPAddress;
     Intent bgService;
@@ -60,10 +60,13 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Accelerometer Sensor
         //myAccelerometer = SM.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         myGyroscope = SM.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
+        myRotation = SM.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
         // Register sensor Listener
         //SM.registerListener(this, myAccelerometer, SensorManager.SENSOR_DELAY_NORMAL);
         SM.registerListener(this, myGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
+        SM.registerListener(this, myRotation, SensorManager.SENSOR_DELAY_FASTEST);
+
 
         // Assign TextView
         duration = (TextView) findViewById(id.duration);
@@ -71,6 +74,10 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         gyroX = (TextView) findViewById(id.gyroX);
         gyroY = (TextView) findViewById(id.gyroY);
         gyroZ = (TextView) findViewById(id.gyroZ);
+        rotX = (TextView) findViewById(id.rotX);
+        rotY = (TextView) findViewById(id.rotY);
+        rotZ = (TextView) findViewById(id.rotZ);
+        rotW = (TextView) findViewById(id.rotW);
 
         ipaddress = (TextView) findViewById(id.ipaddress);
         ipaddress.setText("216.165.71.242");
@@ -80,6 +87,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         udpSwitch.setOnCheckedChangeListener(this);
 
         gyros = new float[3];
+        rot = new float[4];
         bgService = new Intent(this, BGService.class);
 
         try {
@@ -92,12 +100,23 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-        gyroX.setText("X: " + event.values[0]);
-        gyroY.setText("Y: " + event.values[1]);
-        gyroZ.setText("Z: " + event.values[2]);
-        gyros[0] = event.values[0];
-        gyros[1] = event.values[1];
-        gyros[2] = event.values[2];
+        if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            gyroX.setText("DX: " + event.values[0]);
+            gyroY.setText("DY: " + event.values[1]);
+            gyroZ.setText("DZ: " + event.values[2]);
+            gyros[0] = event.values[0];
+            gyros[1] = event.values[1];
+            gyros[2] = event.values[2];
+        } else if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
+            rotX.setText("QX: " + event.values[0]);
+            rotY.setText("QY: " + event.values[1]);
+            rotZ.setText("QZ: " + event.values[2]);
+            rotW.setText("QW: " + event.values[3]);
+            rot[0] = event.values[0];
+            rot[1] = event.values[1];
+            rot[2] = event.values[2];
+            rot[3] = event.values[3];
+        }
 
         duration.setText("duration: " + ((double) event.timestamp / 1000000000 - timestamp) + "ms");
         timestamp = (double) event.timestamp / 1000000000;
