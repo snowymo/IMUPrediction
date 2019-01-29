@@ -289,28 +289,29 @@ var predictByGyro = function(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz, 
 }
 
 server.on('message', function (message, remote) {
-    //console.log(remote.address + ':' + remote.port);
-	var gyrox = message.readFloatBE(0);
-	var gyroy = message.readFloatBE(4);
-	var gyroz = message.readFloatBE(8);
-    //console.log("gyro:(" + gyrox + "," + gyroy + "," + gyroz + ")");
-    var rotx = message.readFloatBE(12);
-    var roty = message.readFloatBE(16);
-    var rotz = message.readFloatBE(20);
-    var rotw = message.readFloatBE(24);
+    console.log(remote.address + ':' + remote.port);
+	var gyrox = message.readDoubleLE(0);
+	var gyroy = message.readDoubleLE(8);
+	var gyroz = message.readDoubleLE(16);
+    
+    //var rotx = message.readFloatBE(12);
+    //var roty = message.readFloatBE(16);
+    //var rotz = message.readFloatBE(20);
+    //var rotw = message.readFloatBE(24);
     //console.log("rot:(" + rotx + "," + roty + "," + rotz + "," + rotw + ")");
 	// preprocess: convert to euler angle
 
-    var time = message.readFloatBE(28);
+    var time = message.readDoubleLE(24);
+    console.log(time + "\tgyro:(" + gyrox + "," + gyroy + "," + gyroz + ")");
 	var m = new Float32Array(9);
-	for(let i = 0; i < 9; i++)
-		m[i] = message.readFloatBE(32 + 4*i);
+	//for(let i = 0; i < 9; i++)
+		//m[i] = message.readFloatBE(32 + 4*i);
     if (time != last_time) {
         //console.log(time);
         // test with quaternion	
         //predictByQuaternion(time, rotx, roty, rotz, rotw);
         // test with eulerAngles
-        predictByGyro(time, rotx, roty, rotz, rotw, gyrox, gyroy, gyroz, m);
+        predictByGyro(time, 0, 0, 0, 0, gyrox, gyroy, gyroz, m);
         last_time = time;
     }
     
