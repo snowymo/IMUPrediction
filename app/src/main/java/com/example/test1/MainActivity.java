@@ -80,7 +80,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         rotW = (TextView) findViewById(id.rotW);
 
         ipaddress = (TextView) findViewById(id.ipaddress);
-        ipaddress.setText("216.165.71.242");
+        ipaddress.setText("216.165.71.223");
         ipaddress.addTextChangedListener(this);
 
         udpSwitch = findViewById(id.udpSwitch);
