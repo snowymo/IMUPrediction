@@ -11,6 +11,9 @@ public class UDPReceiver : MonoBehaviour
     public int PORT = 12345;
     public string HOST = "216.165.71.223";
 
+    public enum SOURCE_DEVICE { ANDROID, IPHONE};
+    public SOURCE_DEVICE device;
+
     bool active;
 
     public int last_time= 0;
@@ -73,9 +76,22 @@ public class UDPReceiver : MonoBehaviour
 
     void HandleGyroData(Byte[] buf)
     {
+        switch (device) {
+            case SOURCE_DEVICE.ANDROID:
+                HandleAndroidGyroData(buf);
+                break;
+            case SOURCE_DEVICE.IPHONE:
+                HandleIPhoneGyroData(buf);
+                break;
+            default:
+                break;
+        }
+    }
+
+    void HandleAndroidGyroData(Byte[] buf)
+    {
         // we flip endianness here
-        for (int i = 0; i < buf.Length; i+= 4)
-        {
+        for (int i = 0; i < buf.Length; i += 4) {
             byte[] cpy = new Byte[4];
             Buffer.BlockCopy(buf, i, cpy, 0, 4);
             Array.Reverse(cpy);
@@ -87,6 +103,16 @@ public class UDPReceiver : MonoBehaviour
         float time = BitConverter.ToSingle(buf, 28);
         //Debug.Log(string.Format("gyro data: {0} - ({1}, {2}, {3})", time, gyrox, gyroy, gyroz));
         predictor.PredictByGyro(time, new Vector3(gyrox, gyroy, gyroz));
+    }
+
+    void HandleIPhoneGyroData(Byte[] buf)
+    {
+        double gyrox = BitConverter.ToDouble(buf, 0);
+        double gyroy = BitConverter.ToDouble(buf, 8);
+        double gyroz = BitConverter.ToDouble(buf, 16);
+        double time = BitConverter.ToDouble(buf, 24);
+        //Debug.Log(string.Format("gyro data: {0} - ({1}, {2}, {3})", time, gyrox, gyroy, gyroz));
+        predictor.PredictByGyro((float)time, new Vector3((float)gyrox, (float)gyroy, (float)gyroz));
     }
 
     void ReceiveCallback(IAsyncResult ar)
