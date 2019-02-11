@@ -4,6 +4,8 @@ formatSpec = '%f %f %f %f %f %f %f %f';
 sizeA = [17 Inf];
 A = fscanf(fileID,formatSpec,sizeA);
 
+l = length(A)-350
+
 f1 = figure;
 time = A(2,:);
 predx = A(3,:);
@@ -17,33 +19,33 @@ realz = A(8,:);
 
 m = A(9:17,:);
 
-predf = plot(time,predx,'-+');
+predf = plot(time(1:l),predx(1:l),'-+');
 predf.Color = "red";
 
 hold on
-realf = plot(time,realx,'-+');
+realf = plot(time(1:l),realx(1:l),'-+');
 realf.Color = "green";
 
 hold on
-realf = plot(time,predy,'-o');
+realf = plot(time(1:l),predy(1:l),'-o');
 realf.Color = "red";
 
 hold on
-realf = plot(time,realy,'-o');
+realf = plot(time(1:l),realy(1:l),'-o');
 realf.Color = "green";
 
 hold on
-realf = plot(time,predz,'-.');
+realf = plot(time(1:l),predz(1:l),'-.');
 realf.Color = "red";
 
 hold on
-realf = plot(time,realz,'-.');
+realf = plot(time(1:l),realz(1:l),'-.');
 realf.Color = "green";
 hold off
 
 xlabel('time(ms)')
 ylabel('predicted gyro(rad/s)')
-title('Plot of the Gyro Prediction for three axis')
+title('Plot of the Gyro Prediction for three axes')
 
 forward = [0; 0; 1];
 f2 = figure;
@@ -99,10 +101,14 @@ for i = 2:length(time)
 end
 plot3(forwards(1,1), forwards(1,2), forwards(1,3),'o');
 hold on
-p = plot3(forwards(:,1), forwards(:,2), forwards(:,3));
+plot3(0, 0, 0,'o');
+hold on
+
+p = plot3(forwards(1:l-1,1), forwards(1:l-1,2), forwards(1:l-1,3));
 p.Color = "red";
 hold on
-p = plot3(forwardsGT(:,1), forwardsGT(:,2), forwardsGT(:,3));
+l = length(forwardsGT)-350
+p = plot3(forwardsGT(1:l-1,1), forwardsGT(1:l-1,2), forwardsGT(1:l-1,3));
 p.Color = "green";
 xlabel('time(ms)')
 ylabel('ground truth forward')

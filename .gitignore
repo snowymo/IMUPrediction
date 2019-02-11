@@ -12,3 +12,5 @@
 /captures
 .externalNativeBuild
 node_modules/
+unity/Library
+unity/Temp
