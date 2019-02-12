@@ -4,9 +4,9 @@ This project is investigating how to predict IMU for AR/VR devices. It includes 
 
 ## IMU retrieval
 Both iPhone and android are supported. 
-###For android
+### For android
 Launch AndroidStudio and open project in root folder. 
-###For iPhone
+### For iPhone
 1. Pull the submodule, 
 [git@github.com:snowymo/IOSSocket.git](https://github.com/snowymo/IOSSocket) and open *.xcworkspace.
 2. Change the ip to HOST ip address
