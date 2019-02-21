@@ -16,6 +16,8 @@ public class UDPReceiver : MonoBehaviour
 
     bool active;
 
+    public bool initiated = false;
+
     public int last_time= 0;
 
     UdpClient client;
@@ -130,6 +132,7 @@ public class UDPReceiver : MonoBehaviour
         // loop the callback
         UdpState state = new UdpState(e, c);
         c.BeginReceive(new AsyncCallback(ReceiveCallback), state);
+        initiated = true;
     }
     
 }
