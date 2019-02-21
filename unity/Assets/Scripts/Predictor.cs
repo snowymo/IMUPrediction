@@ -138,10 +138,10 @@ public class Predictor : MonoBehaviour
             //Debug.Log("Quat");
             //Debug.Log(sinThetaOverTwo * gyro.x + " " + sinThetaOverTwo * gyro.y + " " + sinThetaOverTwo * gyro.z + " " + cosThetaOverTwo);
             Vector3 v = new Vector3(sinThetaOverTwo * gyro.y - y_const, sinThetaOverTwo *-1 * gyro.z + z_const, sinThetaOverTwo* gyro.x - x_const);
-            //v.x *= -1;
-            v.y *= -1;
-            //v.z *= -1;
-            rotation = new Quaternion(v.x, v.y, v.z, cosThetaOverTwo);
+            v.x *= -1;
+            //v.y *= -1;
+            v.z *= -1;
+            rotation = new Quaternion(v.x, v.z, v.y, cosThetaOverTwo);
         
         }
         else{
