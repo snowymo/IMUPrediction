@@ -59,8 +59,8 @@ namespace Mira
 
             if (camGyroActive && !isSpectator)
             {
-                // if(GyroController.Instance)
-                transform.rotation = camGyroOffset * GyroController.Instance.gyroRotation;
+                if(false)
+                    transform.rotation = camGyroOffset * GyroController.Instance.gyroRotation;
             }
         }
 

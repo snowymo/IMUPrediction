@@ -128,6 +128,7 @@ namespace Mira
                 eyecamera.tag = "MainCamera";
                 eyecamera.rect = new Rect(0f, 0f, 1f, 1f);
                 eyecamera.transform.localPosition = new Vector3(-MiraArController.Instance.IPD / 2 * 0.1f * (1 / MiraArController.scaleMultiplier), 0f, 0f);
+                //eyecamera.transform.rotation = Quaternion.Euler(-90, 0, 0);
                 MiraArController.Instance.leftCam = eyecamera.gameObject;
             }
             else
@@ -136,7 +137,7 @@ namespace Mira
                 eyecamera.rect = new Rect(0f, 0f, 1f, 1f);
 
                 eyecamera.transform.localPosition = new Vector3(MiraArController.Instance.IPD / 2 * 0.1f * (1 / MiraArController.scaleMultiplier), 0f, 0f);
-
+                //eyecamera.transform.rotation = Quaternion.Euler(-90, 0, 0);
                 MiraArController.Instance.rightCam = eyecamera.gameObject;
             }
             return go;
