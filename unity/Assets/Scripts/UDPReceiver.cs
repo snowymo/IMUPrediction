@@ -9,12 +9,14 @@ using UnityEngine;
 public class UDPReceiver : MonoBehaviour
 {
     public int PORT = 12345;
-    public string HOST = "216.165.71.223";
+    public string HOST;
 
     public enum SOURCE_DEVICE { ANDROID, IPHONE};
     public SOURCE_DEVICE device;
 
     bool active;
+
+    public bool initiated = false;
 
     public int last_time= 0;
 
@@ -24,6 +26,18 @@ public class UDPReceiver : MonoBehaviour
     IPEndPoint ep;
 
     public Predictor predictor;
+
+    private void Awake()
+    {
+#if UNITY_EDITOR
+        HOST = "10.19.98.142";
+        Debug.Log("Unity Editor");
+#elif UNITY_IOS
+        HOST = "10.19.187.69";
+        Debug.Log("Iphone");
+#endif
+
+    }
 
     // Start is called before the first frame update
     void Start()
@@ -130,6 +144,7 @@ public class UDPReceiver : MonoBehaviour
         // loop the callback
         UdpState state = new UdpState(e, c);
         c.BeginReceive(new AsyncCallback(ReceiveCallback), state);
+        initiated = true;
     }
     
 }

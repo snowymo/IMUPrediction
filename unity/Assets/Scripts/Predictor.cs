@@ -7,17 +7,38 @@ public class Predictor : MonoBehaviour
 {
     List<KeyValuePair<float, Vector3>> gyro_history;
     List<KeyValuePair<float, Vector3>> gyro_predictions;
+    private static float NS2S = 1.0f / 1000000000.0f;
+    private float timestamp;
+    private float timestamp2;
+    public GameObject world;
+    public UDPReceiver receiver;
+    int iters = 0;
+    float sumx = 0;
+    float sumy = 0;
+    float sumz = 0;
+
+    //Drift factor
+    //float x_const = -0.0007957f;
+    float x_const = -0.0008073f;
+    //float y_const = -0.0004028f;
+    float y_const = -0.0003908f;
+    float z_const = -0.0000354f;
 
     public int history_length = 15;
     public float lag = 0.03f;
 
     float last_time = 0f;
 
+    Quaternion calculated_pose, headset_pose;
     // Start is called before the first frame update
     void Start()
     {
         gyro_history = new List<KeyValuePair<float, Vector3>>();
         gyro_predictions = new List<KeyValuePair<float, Vector3>>();
+        calculated_pose = Quaternion.identity;
+        headset_pose = new Quaternion(0.066f, -0.757f, 0.045f, -0.649f);
+        headset_pose = Quaternion.Euler(0, -90, 0);
+        //world.transform.rotation *= new Quaternion(-0.50116f, -0.72521f, -0.22508f, 0.415f);
     }
 
     float[] PolynomialRegression(List<KeyValuePair<float, float>> data, int order)
@@ -95,11 +116,143 @@ public class Predictor : MonoBehaviour
     }
 
     public Vector3 GetLatestPrediction() => gyro_predictions[gyro_predictions.Count - 1].Value;
+    public KeyValuePair<float, Vector3> GetLatestPredictionPair() => gyro_predictions[gyro_predictions.Count - 1];
     public Vector3 GetLatestGyroData() => gyro_history[gyro_history.Count - 1].Value;
+    public KeyValuePair<float, Vector3> GetLatestGyroDataPair() => gyro_history[gyro_history.Count - 1];
 
+
+    public Quaternion GyroToQuat(KeyValuePair<float,Vector3> gyroData, bool drift){
+        Vector3 gyro = gyroData.Value;
+        //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.z, gyroData.Value.x);//correct
+        //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.x, gyroData.Value.z);
+        //Vector3 gyro = new Vector3(gyroData.Value.x, gyroData.Value.z, gyroData.Value.y);
+        //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.x, gyroData.Value.y);
+        //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.y, gyroData.Value.x);
+        Debug.Log("test1:" + gyro);
+        float event_time = gyroData.Key;
+        Quaternion rotation;
+        if(timestamp != 0){
+            float dT = (event_time - timestamp);
+            float omegaMagnitude = Mathf.Sqrt(gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z);
+            if (omegaMagnitude > Mathf.Epsilon)
+            {
+                gyro.x /= omegaMagnitude;
+                gyro.y /= omegaMagnitude;
+                gyro.z /= omegaMagnitude;
+            }
+            float thetaOverTwo = omegaMagnitude * dT / 2.0f;
+            float sinThetaOverTwo = Mathf.Sin(thetaOverTwo);
+            float cosThetaOverTwo = Mathf.Cos(thetaOverTwo);
+            //Debug.Log("Quat");
+            //Debug.Log(sinThetaOverTwo * gyro.x + " " + sinThetaOverTwo * gyro.y + " " + sinThetaOverTwo * gyro.z + " " + cosThetaOverTwo);
+            Vector3 v = new Vector3(sinThetaOverTwo * gyro.x - x_const, sinThetaOverTwo * gyro.y - y_const, sinThetaOverTwo * gyro.z - z_const);
+            //Vector3 v = new Vector3(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z);
+            //v.x *= -1;
+            //v.y *= -1;
+            //v.z *= -1;
+            rotation = new Quaternion(v.x, v.y, v.z, cosThetaOverTwo);
+            //Debug.Log("if case:" + rotation.ToString("F3"));
+            //Unity Config
+            //rotation = new Quaternion(v.y, -1 * v.x, v.z, cosThetaOverTwo);
+            //Mira Prism Config
+            //rotation = new Quaternion(v.y, v.x, -1 * v.z, cosThetaOverTwo);
+
+        }
+        else{
+            rotation = Quaternion.identity;
+            Debug.Log("else case:" + rotation.ToString("F3"));
+        }
+        timestamp = event_time;
+        //Debug.Log("test2:" + gyro);
+        return rotation;
+    }
+
+    public Quaternion RightHandToLeftHand(Quaternion quat){
+        return new Quaternion(quat.x, quat.y, -1 * quat.z, -1 * quat.w);
+    }
+
+    public Quaternion UnityToPrism(Quaternion quat){
+        return new Quaternion(-1 * quat.x, -1 * quat.y, -1 * quat.z, quat.w);
+    }
+
+    public Quaternion TestGyroToQuat(KeyValuePair<float, Vector3> gyroData){
+        Vector3 gyro = gyroData.Value;
+        float event_time = gyroData.Key;
+        Quaternion rotation;
+
+        if (timestamp2 != 0)
+        {
+            float dT = (event_time - timestamp2);
+            float omegaMagnitude = Mathf.Sqrt(gyro.x * gyro.x + gyro.y * gyro.y + gyro.z * gyro.z);
+            if (omegaMagnitude > Mathf.Epsilon)
+            {
+                gyro.x /= omegaMagnitude;
+                gyro.y /= omegaMagnitude;
+                gyro.z /= omegaMagnitude;
+            }
+            float thetaOverTwo = omegaMagnitude * dT / 2.0f;
+            float sinThetaOverTwo = Mathf.Sin(thetaOverTwo);
+            float cosThetaOverTwo = Mathf.Cos(thetaOverTwo);
+            rotation = new Quaternion(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z, cosThetaOverTwo);
+        }
+        else{
+            rotation = Quaternion.identity;
+        }
+        timestamp2 = event_time;
+        return rotation;
+    }
+    Quaternion prev_baseline;
     // Update is called once per frame
+
+
+
+    //Quaternion iphone2unityQuat = Quaternion.Euler(90,0,0) * Quaternion.Euler(0, 0, 90);
+
+    Quaternion iphone2unity(Quaternion q){
+        //return new Quaternion(q.y, -q.x, -q.z, -q.w);
+        return new Quaternion(q.y, -q.z, q.x, -q.w);
+    }
     void Update()
     {
-        
+        if (receiver.initiated)
+        {
+            //Quaternion world_rotation = GyroToQuat(GetLatestPredictionPair(), true);
+            //world.transform.rotation *= RightHandToLeftHand(world_rotation);
+
+            Quaternion imuquat = ( GyroToQuat(GetLatestGyroDataPair(), true));
+            print("calculated_pose:" + calculated_pose.ToString("F3"));
+            print("imuquat:" + imuquat.ToString("F3"));
+
+            //calculated_pose = iphone2unity(imuquat) * calculated_pose;
+            calculated_pose =  calculated_pose * (imuquat);
+
+            //world.transform.rotation = Quaternion.Inverse( headset_pose) * calculated_pose;// * world.transform.rotation;
+            //world.transform.rotation = calculated_pose;// * world.transform.rotation;
+            print("calculated_pose:" + calculated_pose.eulerAngles.ToString("F3"));
+            //world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0,45,0));
+            world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0));
+            print("world.transform.rotation:" + world.transform.rotation.eulerAngles.ToString("F3"));
+            // tilt here as the last step
+            /*
+            baseline *= RightHandToLeftHand(TestGyroToQuat(GetLatestGyroDataPair()));
+
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                Debug.Log("Baseline Quaternion:" + baseline.eulerAngles);
+                Debug.Log("Delta:" + (Quaternion.Inverse(prev_baseline) * baseline).eulerAngles);
+
+                prev_baseline = baseline;
+            }*/
+
+            /*
+            iters++;
+
+            sumx += world_rotation.x;
+            sumy += world_rotation.y;
+            sumz += world_rotation.z;
+
+            Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
+            */
+        }
     }
 }
