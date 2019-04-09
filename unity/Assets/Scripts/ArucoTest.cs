@@ -64,10 +64,10 @@ public class ArucoTest : MonoBehaviour {
     //When Using Mac Cam:
     static WebCamTexture backCam;
     public GameObject cam_viewer;
-    public GameObject cv_viewer;
+    //public GameObject cv_viewer;
     public GameObject test;
 
-    public GameObject camera;
+    //public GameObject camera;
     DetectorParameters parameters = DetectorParameters.Create();
     double[,] cameraMatrix;
     List<double> distCoeffs;
@@ -291,6 +291,7 @@ public class ArucoTest : MonoBehaviour {
             }
         }
 
+        grey.Dispose();
         //parse output :(
         if(finalAcceptedIds.Count != detectedIds.Length){
             //MAYBE I WILL NEED TO CLEAR DETECTED CORNERS AND IDS....
@@ -365,7 +366,6 @@ public class ArucoTest : MonoBehaviour {
 
         undetectedMarkersIds = undetectedIds;
         undetectedMarkersProjectedCorners = undetectedCorners;
-
     }
 
     public Quaternion RightHandToLeftHand(Quaternion quat)
@@ -385,72 +385,72 @@ public class ArucoTest : MonoBehaviour {
     // Use this for initialization
     void Start () {
         loadCalibration();
-#if UNITY_EDITOR
+//#if UNITY_EDITOR
         if (backCam == null)
             backCam = new WebCamTexture();
         cam_viewer.GetComponent<Renderer>().material.mainTexture = backCam;
         if (!backCam.isPlaying)
             backCam.Play();
-#endif
+//#endif
     }
 
     // Update is called once per frame
     void Update () {
-        Texture2D image;
+
+      //Texture2D image;
+      //image = new Texture2D(backCam.width, backCam.height);
+      //image.SetPixels(backCam.GetPixels());
+
+
+       Mat img = TextureToMat(backCam, null);
+       Mat imgCopy = new Mat();
+       img.CopyTo(imgCopy);
+
+
+      int[] ids;
+      Point2f[][] corners;
+      Point2f[][] rejected;
+      CvAruco.DetectMarkers(img, dictionary, out corners, out ids, parameters, out rejected);
+      List<int> recovered;
+
+      refineDetectedMarkers(img, arucoBoard, corners, ids, rejected, cameraMatrix, distCoeffs, 10.0f, 3.0f, true, out recovered, parameters);
+
+
+    if (ids.Length > 0){
+
+    CvAruco.DrawDetectedMarkers(imgCopy, corners, ids);
+    double[] rvec = new double[0];
+    double[] tvec = new double[0];
+    //THE BOOL MIGHT NOT BE TRUE...change to False if necessary
+    int valid = estimatePoseBoard(corners, ids, arucoBoard, cameraMatrix, distCoeffs, out rvec, out tvec, false);
+if (valid > 0)
+{
+  if (!double.IsNaN(tvec[0]))
+  {
+
+      //test.transform.rotation = RvecToQuat(rvec);
+                   test.transform.rotation = Quaternion.Inverse(RvecToQuat(rvec));
+
+
 #if UNITY_EDITOR
-        image = new Texture2D(backCam.width, backCam.height);
-        image.SetPixels(backCam.GetPixels());
+                    //test.transform.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+                    test.transform.position = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
 #elif UNITY_IOS
-        image = camera.GetComponent<WikitudeCamera>().CameraTexture;
-#endif       
-        Mat img = TextureToMat(image, null);
-        Mat imgCopy = new Mat();
-        img.CopyTo(imgCopy);
-        int[] ids;
-        Point2f[][] corners;
-        Point2f[][] rejected;
-        CvAruco.DetectMarkers(img, dictionary, out corners, out ids, parameters, out rejected);
-        List<int> recovered;
-        refineDetectedMarkers(img, arucoBoard, corners, ids, rejected, cameraMatrix, distCoeffs, 10.0f, 3.0f, true, out recovered, parameters);
+     //test.transform.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+                    test.transform.position = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+#endif
 
-        if (ids.Length > 0){
-#if UNITY_EDITOR
-            CvAruco.DrawDetectedMarkers(imgCopy, corners, ids);
 
-            //cv_viewer.GetComponent<Renderer>().material.mainTexture = MatToTexture(imgCopy,null);
-#endif     
-
-            double[] rvec = new double[0];
-            double[] tvec = new double[0];
-            //THE BOOL MIGHT NOT BE TRUE...change to False if necessary
-            int valid = estimatePoseBoard(corners, ids, arucoBoard, cameraMatrix, distCoeffs, out rvec, out tvec, false);
-            if (valid > 0)
-            {
-                if (!double.IsNaN(tvec[0]))
-                {
-                    /*
-                    double[,] current_rotation;
-                    Cv2.Rodrigues(rvec, out current_rotation);
-                    Matrix4x4 rotation_transform = Matrix4x4.identity;
-                    for (int i = 0; i < 3; i++)
-                    {
-                        for (int j = 0; j < 3; j++)
-                        {
-                            rotation_transform[i, j] = (float)current_rotation[i, j];
-                        }
-                    }
-                    test.transform.rotation = RightHandToLeftHand(rotation_transform.rotation);
-                    */
-                    test.transform.rotation = RvecToQuat(rvec);
-                    test.transform.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-
-                   //CvAruco.DrawAxis(imgCopy, cameraMatrix, distCoeffs, rvec, tvec, 1);
                 }
             }
 
-        }
-        //
-        cv_viewer.GetComponent<Renderer>().material.mainTexture = MatToTexture(imgCopy, null);
+}
+
+
+        //cv_viewer.GetComponent<Renderer>().material.mainTexture = image;//MatToTexture(imgCopy, null);
+
+        img.Dispose();
+       imgCopy.Dispose();
 
     }
 }
