@@ -29,7 +29,7 @@ public class Predictor : MonoBehaviour
 
     float last_time = 0f;
 
-    Quaternion calculated_pose, headset_pose;
+    public Quaternion calculated_pose, headset_pose;
     // Start is called before the first frame update
     void Start()
     {
@@ -208,7 +208,7 @@ public class Predictor : MonoBehaviour
 
     //Quaternion iphone2unityQuat = Quaternion.Euler(90,0,0) * Quaternion.Euler(0, 0, 90);
 
-    Quaternion iphone2unity(Quaternion q){
+    public Quaternion iphone2unity(Quaternion q){
         //return new Quaternion(q.y, -q.x, -q.z, -q.w);
         return new Quaternion(q.y, -q.z, q.x, -q.w);
     }
@@ -216,43 +216,12 @@ public class Predictor : MonoBehaviour
     {
         if (receiver.initiated)
         {
-            //Quaternion world_rotation = GyroToQuat(GetLatestPredictionPair(), true);
-            //world.transform.rotation *= RightHandToLeftHand(world_rotation);
+           
 
-            Quaternion imuquat = ( GyroToQuat(GetLatestGyroDataPair(), true));
-            print("calculated_pose:" + calculated_pose.ToString("F3"));
-            print("imuquat:" + imuquat.ToString("F3"));
-
-            //calculated_pose = iphone2unity(imuquat) * calculated_pose;
+            Quaternion imuquat = GyroToQuat(GetLatestGyroDataPair(), true);
             calculated_pose =  calculated_pose * (imuquat);
+            world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
 
-            //world.transform.rotation = Quaternion.Inverse( headset_pose) * calculated_pose;// * world.transform.rotation;
-            //world.transform.rotation = calculated_pose;// * world.transform.rotation;
-            print("calculated_pose:" + calculated_pose.eulerAngles.ToString("F3"));
-            //world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0,45,0));
-            world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0));
-            print("world.transform.rotation:" + world.transform.rotation.eulerAngles.ToString("F3"));
-            // tilt here as the last step
-            /*
-            baseline *= RightHandToLeftHand(TestGyroToQuat(GetLatestGyroDataPair()));
-
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                Debug.Log("Baseline Quaternion:" + baseline.eulerAngles);
-                Debug.Log("Delta:" + (Quaternion.Inverse(prev_baseline) * baseline).eulerAngles);
-
-                prev_baseline = baseline;
-            }*/
-
-            /*
-            iters++;
-
-            sumx += world_rotation.x;
-            sumy += world_rotation.y;
-            sumz += world_rotation.z;
-
-            Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
-            */
         }
     }
 }

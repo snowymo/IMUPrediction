@@ -59,13 +59,14 @@ public struct GridBoard
 
 }
 
-public class ArucoTest : MonoBehaviour {
+public class ArucoTracker : MonoBehaviour {
 
     //When Using Mac Cam:
     static WebCamTexture backCam;
     public GameObject cam_viewer;
     //public GameObject cv_viewer;
     public GameObject test;
+    public bool initiated = false;
 
     //public GameObject camera;
     DetectorParameters parameters = DetectorParameters.Create();
@@ -78,6 +79,9 @@ public class ArucoTest : MonoBehaviour {
     int[] random_markers = { 307, 555, 904, 346, 491, 717, 49, 577, 659, 449, 
         396, 263, 786, 438, 182, 699,498, 443, 848, 183, 969, 275, 741, 664, 612, 205,
     499, 630, 341, 248, 166, 429, 23, 546, 164, 635};
+
+    public Quaternion rotation_vec;
+    public Vector3 translation_vec;
 
     public void loadCalibration(){
 
@@ -374,6 +378,13 @@ public class ArucoTest : MonoBehaviour {
     }
 
 
+
+    public Quaternion iphone2unity(Quaternion q)
+    {
+        //return new Quaternion(q.y, -q.x, -q.z, -q.w);
+        return new Quaternion(q.y, -q.z, q.x, -q.w);
+    }
+
     public Quaternion RvecToQuat(double[] rvec)
     {
         float rnorm = new Vector3((float)rvec[0], (float)rvec[1], (float)rvec[2]).magnitude;
@@ -385,13 +396,25 @@ public class ArucoTest : MonoBehaviour {
     // Use this for initialization
     void Start () {
         loadCalibration();
-//#if UNITY_EDITOR
+#if UNITY_EDITOR
         if (backCam == null)
             backCam = new WebCamTexture();
+#elif UNITY_IOS
+           foreach (WebCamDevice cam in WebCamTexture.devices)
+        {
+            if (cam.isFrontFacing)
+            {
+                string frontCamName = cam.name;
+                backCam = new WebCamTexture(frontCamName, Screen.width, Screen.height);
+
+                Debug.Log("#####" + frontCamName);
+            }
+        }
+#endif
         cam_viewer.GetComponent<Renderer>().material.mainTexture = backCam;
         if (!backCam.isPlaying)
             backCam.Play();
-//#endif
+
     }
 
     // Update is called once per frame
@@ -426,21 +449,20 @@ public class ArucoTest : MonoBehaviour {
 if (valid > 0)
 {
   if (!double.IsNaN(tvec[0]))
-  {
+                {
 
-      //test.transform.rotation = RvecToQuat(rvec);
-                   test.transform.rotation = Quaternion.Inverse(RvecToQuat(rvec));
+                    //rotation_vec = Quaternion.Inverse(RvecToQuat(rvec));
+                    rotation_vec = Quaternion.Inverse(iphone2unity(RvecToQuat(rvec)));
+                    test.transform.rotation = rotation_vec;
 
+                    //test.transform.rotation = RvecToQuat(rvec);
 
-#if UNITY_EDITOR
+                    //translation_vec = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
                     //test.transform.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-                    test.transform.position = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-#elif UNITY_IOS
-     //test.transform.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-                    test.transform.position = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-#endif
+                    //test.transform.position = -1 * new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
 
 
+                    initiated = true;
                 }
             }
 
