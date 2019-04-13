@@ -17,6 +17,7 @@ public struct GridBoard
     public int[] ids;
     public Point3f[][] objPoints;
     public List<List<Point3f>> objPtsList;
+    
 
     public GridBoard(int x, int y, float length, float separation, Dictionary dict)
     {
@@ -78,6 +79,13 @@ public class ArucoTest : MonoBehaviour {
     int[] random_markers = { 307, 555, 904, 346, 491, 717, 49, 577, 659, 449, 
         396, 263, 786, 438, 182, 699,498, 443, 848, 183, 969, 275, 741, 664, 612, 205,
     499, 630, 341, 248, 166, 429, 23, 546, 164, 635};
+    // zhenyi
+    public Renderer background;
+    public Camera bgCamera;
+    float image_height = 480, image_width = 640;
+    Vector2 cameraF = new Vector2(408.7f, 428.3f);
+    Vector2 principalPoint = new Vector2(320.0f, 240.0f);
+    float cameraBackgroundDistance = 1f;
 
     public void loadCalibration(){
 
@@ -99,7 +107,16 @@ public class ArucoTest : MonoBehaviour {
         //objPoints = new Mat(1, objPnts.Length, MatType.CV_32F, objPnts);
         cameraMatrix = intrinsicMat;
         distCoeffs = new List<double>(radialTanDist);
-
+        // zhenyi
+        cameraMatrix[0, 0] = 540.01955364602134;
+        cameraMatrix[2, 0] = 294.76282342359644;
+        cameraMatrix[1, 1] = 565.86980782912451;
+        cameraMatrix[2, 1] = 299.38921380782074;
+        distCoeffs[0] = -1.8902355308452077;
+        distCoeffs[1] = 26.940687515100784;
+        distCoeffs[2] = 0.0121538382238777;
+        distCoeffs[3] = 0.050890060910626686;
+        distCoeffs.Add(-111.11737159034945);
     }
 
 
@@ -382,6 +399,7 @@ public class ArucoTest : MonoBehaviour {
 
         return relRot;
     }
+
     // Use this for initialization
     void Start () {
         loadCalibration();
@@ -391,7 +409,30 @@ public class ArucoTest : MonoBehaviour {
         cam_viewer.GetComponent<Renderer>().material.mainTexture = backCam;
         if (!backCam.isPlaying)
             backCam.Play();
-//#endif
+        // zhenyi
+        // configu background
+        background.material.mainTexture = backCam;
+        //#endif
+    }
+
+    void configBackground(){
+        background.material.mainTexture = backCam;
+
+        float fovY = 2f * Mathf.Atan(0.5f * image_height / cameraF.y) * Mathf.Rad2Deg;
+        //mainCamera.fieldOfView = fovY;
+        bgCamera.fieldOfView = fovY;
+
+        float localPositionX = (0.5f * image_width - principalPoint.x) / cameraF.x * cameraBackgroundDistance;
+        float localPositionY = -(0.5f * image_height - principalPoint.y) / cameraF.y * cameraBackgroundDistance; // a minus because OpenCV camera coordinates origin is top - left, but bottom-left in Unity
+
+        // Considering https://stackoverflow.com/a/41137160
+        // scale.x = 2 * cameraBackgroundDistance * tan(fovx / 2), cameraF.x = imageWidth / (2 * tan(fovx / 2))
+        float localScaleX = image_width / cameraF.x * cameraBackgroundDistance;
+        float localScaleY = image_height / cameraF.y * cameraBackgroundDistance;
+
+        // Place and scale the background
+        background.transform.localPosition = new Vector3(localPositionX, localPositionY, cameraBackgroundDistance);
+        background.transform.localScale = new Vector3(localScaleX, localScaleY, 1);
     }
 
     // Update is called once per frame
