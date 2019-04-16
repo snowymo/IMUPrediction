@@ -6,8 +6,7 @@ using OpenCvSharp.Aruco;
 using static OpenCvSharp.Unity;
 using Wikitude;
 
-public struct GridBoard
-{
+public struct GridBoard {
     int markersX;
     int markersY;
     float markersLength;
@@ -17,7 +16,7 @@ public struct GridBoard
     public int[] ids;
     public Point3f[][] objPoints;
     public List<List<Point3f>> objPtsList;
-    
+
 
     public GridBoard(int x, int y, float length, float separation, Dictionary dict)
     {
@@ -35,14 +34,14 @@ public struct GridBoard
         ids = new int[totalMarkers];
         objPoints = new Point3f[totalMarkers][];
 
-        for (int i = 0; i < totalMarkers; i++){
+        for (int i = 0; i < totalMarkers; i++) {
             ids[i] = i + firstMarker;
         }
 
         float maxY = (float)markersY * markersLength + (markersY - 1) * markerSeparation;
         int count = 0;
-        for (int b = 0; b < markersY; b++){
-            for (int a = 0; a < markersX; a++){
+        for (int b = 0; b < markersY; b++) {
+            for (int a = 0; a < markersX; a++) {
                 Point3f[] corners = new Point3f[4];
                 corners[0] = new Point3f(a * (markersLength + markerSeparation),
                                      maxY - b * (markersLength + markerSeparation), 0);
@@ -51,7 +50,7 @@ public struct GridBoard
                 corners[3] = corners[0] + new Point3f(0, -markersLength, 0);
 
                 objPoints[count] = corners;
-                objPtsList.Add(new List<Point3f>{corners[0], corners[1], corners[2], corners[3]});
+                objPtsList.Add(new List<Point3f> { corners[0], corners[1], corners[2], corners[3] });
 
                 count++;
             }
@@ -77,9 +76,10 @@ public class ArucoTest : MonoBehaviour {
     static Dictionary dictionary = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.DictArucoOriginal);
     //Make Gridboard Ob =ject
     GridBoard arucoBoard = new GridBoard(6, 6, 0.03f, 0.002f, dictionary);
-    int[] random_markers = { 307, 555, 904, 346, 491, 717, 49, 577, 659, 449, 
+    int[] random_markers = { 307, 555, 904, 346, 491, 717, 49, 577, 659, 449,
         396, 263, 786, 438, 182, 699,498, 443, 848, 183, 969, 275, 741, 664, 612, 205,
     499, 630, 341, 248, 166, 429, 23, 546, 164, 635};
+
     // zhenyi
     public Renderer background;
     public Camera bgCamera;
@@ -99,7 +99,8 @@ public class ArucoTest : MonoBehaviour {
         UndistortionRectificationMaps2 = new Mat(480, 640, 2);
     public GameObject originalImage;
 
-    public void loadCalibration(){
+    public void loadCalibration()
+    {
 
 #if UNITY_EDITOR
         double[] radialTanDist = { 0.2088f, -0.5676f, 0f, 0f };
@@ -131,7 +132,7 @@ public class ArucoTest : MonoBehaviour {
         cameraMatrix[2, 2] = 1;
         distCoeffsArray = new double[5];
         cameraMatrixArray = new double[9];
-        for(int i = 0; i < 9; i++) {
+        for (int i = 0; i < 9; i++) {
             cameraMatrixArray[i] = cameraMatrix[i / 3, i % 3];
         }
         cameraMatrixMat = new Mat(3, 3, MatType.CV_64FC1, cameraMatrixArray);
@@ -140,10 +141,10 @@ public class ArucoTest : MonoBehaviour {
         //+ cameraMatrixArray[0, 0] + "\t" + cameraMatrixArray[0, 1] + "\t" + cameraMatrixArray[0, 2] + "\t"
         //+ cameraMatrixArray[1, 0] + "\t" + cameraMatrixArray[1, 1] + "\t" + cameraMatrixArray[1, 2] + "\t"
         //+ cameraMatrixArray[2, 0] + "\t" + cameraMatrixArray[2, 1] + "\t" + cameraMatrixArray[2, 2]);
-        distCoeffsArray [0] = distCoeffs[0] = -1.8902355308452077;
-        distCoeffsArray [1] = distCoeffs[1] = 26.940687515100784;
-        distCoeffsArray [2] = distCoeffs[2] = 0.0121538382238777;
-        distCoeffsArray [3] = distCoeffs[3] = 0.050890060910626686;
+        distCoeffsArray[0] = distCoeffs[0] = -1.8902355308452077;
+        distCoeffsArray[1] = distCoeffs[1] = 26.940687515100784;
+        distCoeffsArray[2] = distCoeffs[2] = 0.0121538382238777;
+        distCoeffsArray[3] = distCoeffs[3] = 0.050890060910626686;
         distCoeffs.Add(-111.11737159034945);
         distCoeffsArray[4] = -111.11737159034945;
         imageSize = new Size(image_width, image_height);
@@ -151,7 +152,8 @@ public class ArucoTest : MonoBehaviour {
     }
 
 
-    int estimatePoseBoard(Point2f[][] corners, int[] ids, GridBoard board, double[,] cameraMat, IEnumerable<double> dist, out double[] rvec, out double[] tvec, bool useExtrinsicGuess){
+    int estimatePoseBoard(Point2f[][] corners, int[] ids, GridBoard board, double[,] cameraMat, IEnumerable<double> dist, out double[] rvec, out double[] tvec, bool useExtrinsicGuess)
+    {
 
         Debug.Assert(corners.Length == ids.Length);
         List<Point3f> objPoints = new List<Point3f>();
@@ -197,7 +199,8 @@ public class ArucoTest : MonoBehaviour {
         return (int)objPoints.Count / 4;
     }
 
-    void getBoardObjectAndImagePoints(GridBoard board, Point2f[][] detectedCorners, int[] detectedIds, out List<Point3f> objPoints, out List<Point2f> imgPoints){
+    void getBoardObjectAndImagePoints(GridBoard board, Point2f[][] detectedCorners, int[] detectedIds, out List<Point3f> objPoints, out List<Point2f> imgPoints)
+    {
         Debug.Assert(board.ids.Length == board.objPoints.Length);
         Debug.Assert(detectedIds.Length == detectedCorners.Length);
 
@@ -209,17 +212,14 @@ public class ArucoTest : MonoBehaviour {
         int count = 0;
         //Debug.Log("Detected Markers###:" + nDetectedMarkers);
         //Debug.Log("Board Ids Length###:" + board.ids.Length);
-        for (int i = 0; i < nDetectedMarkers; i++)
-        {
+        for (int i = 0; i < nDetectedMarkers; i++) {
             //Make sure this line is correct...
             int currentId = detectedIds[i];
-            for (int j = 0; j < board.ids.Length; j++)
-            {
+            for (int j = 0; j < board.ids.Length; j++) {
                 //Debug.Log("Current ID:" + currentId + " vs. board id[j]:" + board.ids[j]);
-                if(currentId == board.ids[j] && objPnts.Length >= 4)
-                {
-                    for (int p = 0; p < 4; p++){
-                        if(count < objPnts.Length){
+                if (currentId == board.ids[j] && objPnts.Length >= 4) {
+                    for (int p = 0; p < 4; p++) {
+                        if (count < objPnts.Length) {
                             //Debug.Log("COUNT IN  LOOP:" + count);
                             //Debug.Log("Length of objPnts:" + objPnts.Length);
                             objPnts[count] = board.objPoints[j][p];
@@ -230,21 +230,22 @@ public class ArucoTest : MonoBehaviour {
                 }
             }
         }
-       //Debug.Log("COUNT###:" + count);
+        //Debug.Log("COUNT###:" + count);
         objPoints = new List<Point3f>(objPnts);
         imgPoints = new List<Point2f>(imgPnts);
     }
 
-    void refineDetectedMarkers(Mat image, GridBoard board, Point2f[][] detectedCorners, int[] detectedIds, 
-                               Point2f[][] rejected, double[,] cameraMatrix, List<double> distCoeffs, 
-                               float minRepDistance, float errorCorrectionRate, bool checkAllOrders, 
-                               out List<int> recoveredIdxs, DetectorParameters parameters){
+    void refineDetectedMarkers(Mat image, GridBoard board, Point2f[][] detectedCorners, int[] detectedIds,
+                               Point2f[][] rejected, double[,] cameraMatrix, List<double> distCoeffs,
+                               float minRepDistance, float errorCorrectionRate, bool checkAllOrders,
+                               out List<int> recoveredIdxs, DetectorParameters parameters)
+    {
 
         Debug.Assert(minRepDistance > 0);
         recoveredIdxs = new List<int>();
         if (detectedIds.Length == 0 || rejected.Length == 0) return;
-        
-        
+
+
         List<List<Point2f>> undetectedMarkersCorners;
         List<int> undetectedMarkersIds;
 
@@ -263,37 +264,32 @@ public class ArucoTest : MonoBehaviour {
         List<Point2f[]> finalAcceptedCorners = new List<Point2f[]>();
         List<int> finalAcceptedIds = new List<int>();
 
-        for (int i = 0; i < detectedIds.Length; i++){
+        for (int i = 0; i < detectedIds.Length; i++) {
             finalAcceptedCorners.Add(detectedCorners[i]);
             finalAcceptedIds.Add(detectedIds[i]);
         }
 
-        for (int i = 0; i < undetectedMarkersIds.Count; i++)
-        {
+        for (int i = 0; i < undetectedMarkersIds.Count; i++) {
             int closestCandidateIdx = -1;
             double closestCandidateDistance = minRepDistance * minRepDistance + 1;
             Point2f[] closestRotatedMarker = new Point2f[0];
 
-            for (int j = 0; j < (rejected.Length -1 * rejected[0].Length -1); j++)
-            {
+            for (int j = 0; j < (rejected.Length - 1 * rejected[0].Length - 1); j++) {
                 if (alreadyIdentified[j]) continue;
 
                 double minDistance = closestCandidateDistance + 1;
                 bool valid = false;
                 int validRot = 0;
-                for (int c = 0; c < 4; c++)
-                {
+                for (int c = 0; c < 4; c++) {
                     double currentMaxDistance = 0;
-                    for (int k = 0; k < 4; k++)
-                    {
+                    for (int k = 0; k < 4; k++) {
                         Point2f rejCorner = rejected[j][(c + k) % 4];
                         Point2f distVector = distVector = undetectedMarkersCorners[i][k] - rejCorner;
                         double cornerDist = distVector.X * distVector.X + distVector.Y * distVector.Y;
                         currentMaxDistance = Mathf.Max((float)currentMaxDistance, (float)cornerDist);
                     }
 
-                    if (currentMaxDistance < closestCandidateDistance)
-                    {
+                    if (currentMaxDistance < closestCandidateDistance) {
                         valid = true;
                         validRot = c;
                         minDistance = currentMaxDistance;
@@ -303,8 +299,7 @@ public class ArucoTest : MonoBehaviour {
                 if (!valid) continue;
 
                 Point2f[] rotatedMarker;
-                if (checkAllOrders)
-                {
+                if (checkAllOrders) {
                     rotatedMarker = new Point2f[4];
                     for (int c = 0; c < 4; c++)
                         rotatedMarker[c] = rejected[j][(c + 4 + validRot) % 4];
@@ -314,7 +309,7 @@ public class ArucoTest : MonoBehaviour {
 
                 int codeDistance = 0;
 
-                if(errorCorrectionRate >= 0){
+                if (errorCorrectionRate >= 0) {
                     //TODO HERE
                 }
 
@@ -325,7 +320,7 @@ public class ArucoTest : MonoBehaviour {
                 }
             }
 
-            if(closestCandidateIdx >= 0) {
+            if (closestCandidateIdx >= 0) {
 
                 //remove from rejected
                 alreadyIdentified[closestCandidateIdx] = true;
@@ -335,30 +330,30 @@ public class ArucoTest : MonoBehaviour {
                 finalAcceptedCorners.Add(closestRotatedMarker);
                 finalAcceptedIds.Add(undetectedMarkersIds[i]);
                 recoveredIdxs.Add(closestCandidateIdx);
-                
+
             }
         }
 
         grey.Dispose();
         //parse output :(
-        if(finalAcceptedIds.Count != detectedIds.Length){
+        if (finalAcceptedIds.Count != detectedIds.Length) {
             //MAYBE I WILL NEED TO CLEAR DETECTED CORNERS AND IDS....
             finalAcceptedIds.CopyTo(detectedIds);
-            for (int i = 0; i < finalAcceptedCorners.Count; i++){
+            for (int i = 0; i < finalAcceptedCorners.Count; i++) {
                 for (int j = 0; j < 4; j++) {
                     detectedCorners[i][j] = finalAcceptedCorners[i][j];
                 }
             }
 
             List<Point2f[]> finalRejected = new List<Point2f[]>();
-            for (int i = 0; i < alreadyIdentified.Length; i++){
-                if(!alreadyIdentified[i]) {
+            for (int i = 0; i < alreadyIdentified.Length; i++) {
+                if (!alreadyIdentified[i]) {
                     finalRejected.Add(rejected[i]);
                 }
             }
 
-            for (int i = 0; i < finalRejected.Count; i++){
-                for (int j = 0; j < 4; j++){
+            for (int i = 0; i < finalRejected.Count; i++) {
+                for (int j = 0; j < 4; j++) {
                     rejected[i][j] = finalRejected[i][j];
                 }
             }
@@ -366,16 +361,16 @@ public class ArucoTest : MonoBehaviour {
         }
     }
 
-    void projectUndetectedMarkers(GridBoard board, Point2f[][] detectedCorners, int[] detectedIds, 
-                                  double[,] cameraMatrix, List<double> distCoeffs, 
-                                  out List<List<Point2f>> undetectedMarkersProjectedCorners, out List<int>undetectedMarkersIds)
+    void projectUndetectedMarkers(GridBoard board, Point2f[][] detectedCorners, int[] detectedIds,
+                                  double[,] cameraMatrix, List<double> distCoeffs,
+                                  out List<List<Point2f>> undetectedMarkersProjectedCorners, out List<int> undetectedMarkersIds)
     {
         double[] rvec = new double[0];
         double[] tvec = new double[0];
         int boardDetectedMarkers;
         boardDetectedMarkers = estimatePoseBoard(detectedCorners, detectedIds, board, cameraMatrix, distCoeffs, out rvec, out tvec, false);
-       
-        if (boardDetectedMarkers == 0){
+
+        if (boardDetectedMarkers == 0) {
             undetectedMarkersIds = new List<int>();
             undetectedMarkersProjectedCorners = new List<List<Point2f>>();
             return;
@@ -384,24 +379,20 @@ public class ArucoTest : MonoBehaviour {
         List<List<Point2f>> undetectedCorners = new List<List<Point2f>>();
         List<int> undetectedIds = new List<int>();
 
-        for (int i = 0; i < board.ids.Length; i++)
-        {
+        for (int i = 0; i < board.ids.Length; i++) {
             int foundIdx = -1;
-            for (int j = 0; j < detectedIds.Length; j++)
-            {
-                if (board.ids[i] == detectedIds[j])
-                {
+            for (int j = 0; j < detectedIds.Length; j++) {
+                if (board.ids[i] == detectedIds[j]) {
                     foundIdx = j;
                     break;
                 }
             }
-            if (foundIdx == -1)
-            {
+            if (foundIdx == -1) {
                 undetectedCorners.Add(new List<Point2f>());
                 undetectedIds.Add(board.ids[i]);
-                double[,] jacobian = new double[0,0];
+                double[,] jacobian = new double[0, 0];
                 Point2f[] back;
-                Cv2.ProjectPoints(board.objPtsList[i], rvec, tvec, cameraMatrix, distCoeffs.ToArray(),out back, out jacobian);
+                Cv2.ProjectPoints(board.objPtsList[i], rvec, tvec, cameraMatrix, distCoeffs.ToArray(), out back, out jacobian);
 
                 undetectedCorners[undetectedCorners.Count - 1].Add(back[0]);
                 undetectedCorners[undetectedCorners.Count - 1].Add(back[1]);
@@ -432,12 +423,13 @@ public class ArucoTest : MonoBehaviour {
     }
 
     // Use this for initialization
-    void Start () {
+    void Start()
+    {
         loadCalibration();
-//#if UNITY_EDITOR
+        //#if UNITY_EDITOR
         if (backCam == null)
             backCam = new WebCamTexture();
-        imageTexture = new Texture2D(640,480);
+        imageTexture = new Texture2D(640, 480);
         undistortTexture = new Texture2D((int)image_width, (int)image_height);
         cam_viewer.GetComponent<Renderer>().material.mainTexture = undistortTexture;// backCam;
         //originalImage.GetComponent<Renderer>().material.mainTexture = imageTexture;
@@ -460,14 +452,15 @@ public class ArucoTest : MonoBehaviour {
         RectificationMat = new Mat();
         cameraF = new Vector2((float)RectifiedCameraMat.At<double>(0, 0), (float)RectifiedCameraMat.At<double>(1, 1));
         print("camera F:" + cameraF);
-    
+
         Cv2.InitUndistortRectifyMap(cameraMatrixMat, distCoeffsMat,
           RectificationMat, RectifiedCameraMat, imageSize, MatType.CV_16SC2,
           UndistortionRectificationMaps1, UndistortionRectificationMaps2);
     }
 
     //ConfigureRectifiedCamera
-    void configBackground(){
+    void configBackground()
+    {
         //background.material.mainTexture = backCam;
         background.material.mainTexture = undistortTexture;
         float fovY = 2f * Mathf.Atan(0.5f * image_height / cameraF.y) * Mathf.Rad2Deg;
@@ -496,20 +489,18 @@ public class ArucoTest : MonoBehaviour {
         //testRemap.GetComponent<Renderer>().material.mainTexture = MatToTexture(image);
         Cv2.Remap(image, image, UndistortionRectificationMaps1,
           UndistortionRectificationMaps2);
-        
+
     }
 
     // Update is called once per frame
-    void Update () {
+    void Update()
+    {
 
         //Texture2D image;
         //image = new Texture2D(backCam.width, backCam.height);
         //image.SetPixels(backCam.GetPixels());
 
-         Mat img = TextureToMat(backCam, null);
-        
-
-        
+        Mat img = TextureToMat(backCam, null);
 
         // zhenyi remap
         UndistortRectifyImages(img);
@@ -518,31 +509,28 @@ public class ArucoTest : MonoBehaviour {
 
         Mat imgCopy = new Mat();
         img.CopyTo(imgCopy);
-
-
+        
         int[] ids;
-      Point2f[][] corners;
-      Point2f[][] rejected;
-      CvAruco.DetectMarkers(img, dictionary, out corners, out ids, parameters, out rejected);
-      List<int> recovered;
+        Point2f[][] corners;
+        Point2f[][] rejected;
+        CvAruco.DetectMarkers(img, dictionary, out corners, out ids, parameters, out rejected);
+        List<int> recovered;
 
-      refineDetectedMarkers(img, arucoBoard, corners, ids, rejected, cameraMatrix, distCoeffs, 10.0f, 3.0f, true, out recovered, parameters);
+        refineDetectedMarkers(img, arucoBoard, corners, ids, rejected, cameraMatrix, distCoeffs, 10.0f, 3.0f, true, out recovered, parameters);
 
 
-    if (ids.Length > 0){
+        if (ids.Length > 0) {
 
-    CvAruco.DrawDetectedMarkers(imgCopy, corners, ids);
-    double[] rvec = new double[0];
-    double[] tvec = new double[0];
-    //THE BOOL MIGHT NOT BE TRUE...change to False if necessary
-    int valid = estimatePoseBoard(corners, ids, arucoBoard, cameraMatrix, distCoeffs, out rvec, out tvec, false);
-if (valid > 0)
-{
-  if (!double.IsNaN(tvec[0]))
-  {
+            CvAruco.DrawDetectedMarkers(imgCopy, corners, ids);
+            double[] rvec = new double[0];
+            double[] tvec = new double[0];
+            //THE BOOL MIGHT NOT BE TRUE...change to False if necessary
+            int valid = estimatePoseBoard(corners, ids, arucoBoard, cameraMatrix, distCoeffs, out rvec, out tvec, false);
+            if (valid > 0) {
+                if (!double.IsNaN(tvec[0])) {
 
-      //test.transform.rotation = RvecToQuat(rvec);
-                   test.transform.rotation = Quaternion.Inverse(RvecToQuat(rvec));
+                    //test.transform.rotation = RvecToQuat(rvec);
+                    test.transform.rotation = Quaternion.Inverse(RvecToQuat(rvec));
 
 
 #if UNITY_EDITOR
@@ -557,13 +545,13 @@ if (valid > 0)
                 }
             }
 
-}
+        }
 
 
         //cv_viewer.GetComponent<Renderer>().material.mainTexture = image;//MatToTexture(imgCopy, null);
 
         img.Dispose();
-       imgCopy.Dispose();
+        imgCopy.Dispose();
 
     }
 }
