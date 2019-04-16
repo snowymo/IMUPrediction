@@ -393,9 +393,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cam_viewer: {fileID: 1815377155}
-  cv_viewer: {fileID: 1213513211}
   test: {fileID: 20168093}
-  camera: {fileID: 1825244347}
 --- !u!4 &1223078686
 Transform:
   m_ObjectHideFlags: 0
