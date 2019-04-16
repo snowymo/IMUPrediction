@@ -64,6 +64,7 @@ public class ArucoTest : MonoBehaviour {
 
     //When Using Mac Cam:
     static WebCamTexture backCam;
+    static Texture2D imageTexture, undistortTexture;
     public GameObject cam_viewer;
     //public GameObject cv_viewer;
     public GameObject test;
@@ -86,6 +87,17 @@ public class ArucoTest : MonoBehaviour {
     Vector2 cameraF = new Vector2(408.7f, 428.3f);
     Vector2 principalPoint = new Vector2(320.0f, 240.0f);
     float cameraBackgroundDistance = 1f;
+    double[] RectifiedCameraMatrices;
+    double[] cameraMatrixArray;
+    double[] distCoeffsArray;
+    Mat cameraMatrixMat, distCoeffsMat, RectifiedCameraMat;
+    Size imageSize;
+    OpenCvSharp.Rect noROI = new OpenCvSharp.Rect();
+    Mat RectificationMat;
+    double[] noRectificationMatrix = new double[0];
+    Mat UndistortionRectificationMaps1 = new Mat(480, 640, MatType.CV_16SC2),
+        UndistortionRectificationMaps2 = new Mat(480, 640, 2);
+    public GameObject originalImage;
 
     public void loadCalibration(){
 
@@ -109,14 +121,33 @@ public class ArucoTest : MonoBehaviour {
         distCoeffs = new List<double>(radialTanDist);
         // zhenyi
         cameraMatrix[0, 0] = 540.01955364602134;
-        cameraMatrix[2, 0] = 294.76282342359644;
+        cameraMatrix[0, 1] = 0;
+        cameraMatrix[0, 2] = 294.76282342359644;
+        cameraMatrix[1, 0] = 0;
         cameraMatrix[1, 1] = 565.86980782912451;
-        cameraMatrix[2, 1] = 299.38921380782074;
-        distCoeffs[0] = -1.8902355308452077;
-        distCoeffs[1] = 26.940687515100784;
-        distCoeffs[2] = 0.0121538382238777;
-        distCoeffs[3] = 0.050890060910626686;
+        cameraMatrix[1, 2] = 299.38921380782074;
+        cameraMatrix[2, 0] = 0;
+        cameraMatrix[2, 1] = 0;
+        cameraMatrix[2, 2] = 1;
+        distCoeffsArray = new double[5];
+        cameraMatrixArray = new double[9];
+        for(int i = 0; i < 9; i++) {
+            cameraMatrixArray[i] = cameraMatrix[i / 3, i % 3];
+        }
+        cameraMatrixMat = new Mat(3, 3, MatType.CV_64FC1, cameraMatrixArray);
+        distCoeffsMat = new Mat(1, 5, MatType.CV_64FC1, distCoeffsArray);
+        //    Debug.Log("cameraMatrix\t"
+        //+ cameraMatrixArray[0, 0] + "\t" + cameraMatrixArray[0, 1] + "\t" + cameraMatrixArray[0, 2] + "\t"
+        //+ cameraMatrixArray[1, 0] + "\t" + cameraMatrixArray[1, 1] + "\t" + cameraMatrixArray[1, 2] + "\t"
+        //+ cameraMatrixArray[2, 0] + "\t" + cameraMatrixArray[2, 1] + "\t" + cameraMatrixArray[2, 2]);
+        distCoeffsArray [0] = distCoeffs[0] = -1.8902355308452077;
+        distCoeffsArray [1] = distCoeffs[1] = 26.940687515100784;
+        distCoeffsArray [2] = distCoeffs[2] = 0.0121538382238777;
+        distCoeffsArray [3] = distCoeffs[3] = 0.050890060910626686;
         distCoeffs.Add(-111.11737159034945);
+        distCoeffsArray[4] = -111.11737159034945;
+        imageSize = new Size(image_width, image_height);
+        RectifiedCameraMatrices = new double[9];
     }
 
 
@@ -406,18 +437,39 @@ public class ArucoTest : MonoBehaviour {
 //#if UNITY_EDITOR
         if (backCam == null)
             backCam = new WebCamTexture();
-        cam_viewer.GetComponent<Renderer>().material.mainTexture = backCam;
+        imageTexture = new Texture2D(640,480);
+        undistortTexture = new Texture2D((int)image_width, (int)image_height);
+        cam_viewer.GetComponent<Renderer>().material.mainTexture = undistortTexture;// backCam;
+        //originalImage.GetComponent<Renderer>().material.mainTexture = imageTexture;
+        originalImage.GetComponent<Renderer>().material.mainTexture = backCam;
+
         if (!backCam.isPlaying)
             backCam.Play();
         // zhenyi
-        // configu background
-        background.material.mainTexture = backCam;
+        InitializeRectificationAndUndistortionMaps();
+        // config background
+        configBackground();
+        //background.material.mainTexture = backCam;
         //#endif
     }
 
-    void configBackground(){
-        background.material.mainTexture = backCam;
+    // hehe 
+    void InitializeRectificationAndUndistortionMaps()
+    {
+        RectifiedCameraMat = Cv2.GetOptimalNewCameraMatrix(cameraMatrixMat, distCoeffsMat, imageSize, 1.0, imageSize, out noROI, true);
+        RectificationMat = new Mat();
+        cameraF = new Vector2((float)RectifiedCameraMat.At<double>(0, 0), (float)RectifiedCameraMat.At<double>(1, 1));
+        print("camera F:" + cameraF);
+    
+        Cv2.InitUndistortRectifyMap(cameraMatrixMat, distCoeffsMat,
+          RectificationMat, RectifiedCameraMat, imageSize, MatType.CV_16SC2,
+          UndistortionRectificationMaps1, UndistortionRectificationMaps2);
+    }
 
+    //ConfigureRectifiedCamera
+    void configBackground(){
+        //background.material.mainTexture = backCam;
+        background.material.mainTexture = undistortTexture;
         float fovY = 2f * Mathf.Atan(0.5f * image_height / cameraF.y) * Mathf.Rad2Deg;
         //mainCamera.fieldOfView = fovY;
         bgCamera.fieldOfView = fovY;
@@ -435,20 +487,40 @@ public class ArucoTest : MonoBehaviour {
         background.transform.localScale = new Vector3(localScaleX, localScaleY, 1);
     }
 
+    void UndistortRectifyImages(Mat image)
+    {
+        //print("UndistortionRectificationMaps1:" + UndistortionRectificationMaps1);
+        //print("UndistortionRectificationMaps2:" + UndistortionRectificationMaps2);
+        //Mat remapImage = new Mat();
+        //image.CopyTo(remapImage);
+        //testRemap.GetComponent<Renderer>().material.mainTexture = MatToTexture(image);
+        Cv2.Remap(image, image, UndistortionRectificationMaps1,
+          UndistortionRectificationMaps2);
+        
+    }
+
     // Update is called once per frame
     void Update () {
 
-      //Texture2D image;
-      //image = new Texture2D(backCam.width, backCam.height);
-      //image.SetPixels(backCam.GetPixels());
+        //Texture2D image;
+        //image = new Texture2D(backCam.width, backCam.height);
+        //image.SetPixels(backCam.GetPixels());
+
+         Mat img = TextureToMat(backCam, null);
+        
+
+        
+
+        // zhenyi remap
+        UndistortRectifyImages(img);
+        undistortTexture = MatToTexture(img);
+        background.material.mainTexture = undistortTexture;
+
+        Mat imgCopy = new Mat();
+        img.CopyTo(imgCopy);
 
 
-       Mat img = TextureToMat(backCam, null);
-       Mat imgCopy = new Mat();
-       img.CopyTo(imgCopy);
-
-
-      int[] ids;
+        int[] ids;
       Point2f[][] corners;
       Point2f[][] rejected;
       CvAruco.DetectMarkers(img, dictionary, out corners, out ids, parameters, out rejected);
