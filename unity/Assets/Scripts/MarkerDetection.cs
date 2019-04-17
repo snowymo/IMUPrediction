@@ -114,7 +114,8 @@ public class MarkerDetection : MonoBehaviour {
 
         markers.Clear();
         for (int i = 0; i < ids.Length; i++) {
-            markers.Add(new Marker(ids[i], corners[i]));
+            if(ids[i] < 12)
+                markers.Add(new Marker(ids[i], corners[i]));
         }
 
         
@@ -143,6 +144,8 @@ public class MarkerDetection : MonoBehaviour {
         CvAruco.DrawDetectedMarkers(image, corners, ids);
         //CvAruco.DrawAxis(image, webCamera.RectifiedCameraMat, webCamera.distCoeffsArray, UndistortedDistCoeffs,
         //MarkerRvecs[cameraId][dictionary].At(i), MarkerTvecs[cameraId][dictionary].At(i), estimatePoseMarkerLength);
+        //print("markers " + markers.Count);
+        //print("singleCubes " + singleCubes.Length);
         for (int i = 0; i < markers.Count; i++) {
             //for(int j = 0; j < 4; j++) {
                 //Cv2.Circle(image, (int)markers[i].corners[j].X, (int)markers[i].corners[j].Y, j + 1, Scalar.Blue);
@@ -152,7 +155,7 @@ public class MarkerDetection : MonoBehaviour {
             singleCubes[i].transform.rotation = RvecToQuat(markers[i].rvec);
             singleCubes[i].SetActive(true);
         }
-        if(ids.Length > 0) {
+        if(markers.Count > 0) {
             CvAruco.DrawAxis(image, webCamera.cameraMatrix, webCamera.distCoeffsArray, rvec, tvec, 0.2f);
             cube.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
             cube.rotation = RvecToQuat(rvec);
@@ -163,7 +166,7 @@ public class MarkerDetection : MonoBehaviour {
 
     void estimateBoard()
     {
-        if(ids.Length > 0) {
+        if(markers.Count > 0) {
             List<Point3f> objPoints = new List<Point3f>();
             List<Point2f> imgPoints = new List<Point2f>();
             getBoardObjectAndImagePoints(arucoBoard, corners, ids, out objPoints, out imgPoints);
