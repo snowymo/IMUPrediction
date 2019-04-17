@@ -5,7 +5,22 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
+  - enabled: 0
+    path: 
+    guid: 00000000000000000000000000000000
+  - enabled: 0
+    path: Assets/main.unity
+    guid: f4acf6b3e2a92ec4ba3dbf8ac7542e85
+  - enabled: 0
+    path: Assets/aruco.unity
+    guid: 56ba4bca9767e416993bf8ea4a3d38d0
+  - enabled: 0
+    path: Assets/XRClassroom.unity
+    guid: ff3407e0e19984273bb7fa58cfc20016
+  - enabled: 0
+    path: Assets/demo.unity
+    guid: 86534db7c751a472b8a224748c7aa44a
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/MiraSDK/Scenes/Tutorials/102_ControllerInteractions.unity
+    guid: 73b843499980d493ea21ac1ba80a5153
   m_configObjects: {}

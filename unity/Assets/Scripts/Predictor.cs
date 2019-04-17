@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MathNet.Numerics.LinearAlgebra;
+using UnityEngine.UI;
 
 public class Predictor : MonoBehaviour
 {
@@ -28,6 +29,8 @@ public class Predictor : MonoBehaviour
     public float lag = 0.03f;
 
     float last_time = 0f;
+
+    public Text output_rot;
 
     public Quaternion calculated_pose, headset_pose;
     // Start is called before the first frame update
@@ -221,6 +224,7 @@ public class Predictor : MonoBehaviour
             Quaternion imuquat = GyroToQuat(GetLatestGyroDataPair(), true);
             calculated_pose =  calculated_pose * (imuquat);
             world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
+            output_rot.text = "IMU: "+world.transform.rotation.ToString();
 
         }
     }

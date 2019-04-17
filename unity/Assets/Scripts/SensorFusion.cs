@@ -12,7 +12,7 @@ public class SensorFusion : MonoBehaviour
     void UpdateTracking(){
         //TODO: There might need to be an offset 
         //because we want the center of the board.
-        Quaternion imu_rot = Quaternion.Inverse(imu.iphone2unity(imu.calculated_pose * Quaternion.Euler(0, -45, 0)));
+        Quaternion imu_rot = imu.iphone2unity(imu.calculated_pose * Quaternion.Euler(0, -45, 0));
         Quaternion inv = Quaternion.Inverse(imu_rot);
         Quaternion optical = tracker.rotation_vec * inv;
 
