@@ -36,7 +36,7 @@ public class MarkerDetection : MonoBehaviour {
     ArucoCamera webCamera;
 
     static Dictionary dictionary = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.DictArucoOriginal);
-    List<Marker> markers = new List<Marker>();
+    Dictionary<int, Marker> markers = new Dictionary<int, Marker>();
 
     int[] ids;
     Point2f[][] corners;
@@ -82,8 +82,8 @@ public class MarkerDetection : MonoBehaviour {
     {
         detect(image);
 
-        for (int i = 0; i < markers.Count; i++)
-            estimateSingleMarker(markers[i]);
+        foreach (int key in markers.Keys)
+            estimateSingleMarker(markers[key]);
 
         estimateBoard();
         //estimateTransforms(image);
@@ -101,6 +101,7 @@ public class MarkerDetection : MonoBehaviour {
         draw(image);
     }
 
+    List<int> lowConfIds = new List<int>();
     void detect(Mat image)
     {
         
@@ -113,12 +114,36 @@ public class MarkerDetection : MonoBehaviour {
         }
 
         markers.Clear();
+        lowConfIds.Clear();
         for (int i = 0; i < ids.Length; i++) {
-            if(ids[i] < 12)
-                markers.Add(new Marker(ids[i], corners[i]));
+            if(ids[i] < 12){
+                if (!markers.ContainsKey(ids[i])) {
+                    markers.Add(ids[i], new Marker(ids[i], corners[i]));
+                }
+                else {
+                    lowConfIds.Add(ids[i]);
+                }
+            }
+         }
+        for(int i = 0; i < lowConfIds.Count; i++) {
+            print("removed: " + lowConfIds[i]);
+            markers.Remove(lowConfIds[i]);
         }
-
-        
+        if(lowConfIds.Count > 0)
+            foreach (int key in markers.Keys) {
+                Marker val = markers[key];
+                print("marker:" + key + " = " + val);
+            }
+        // reconstruct the corners and ids
+        corners = new Point2f[markers.Count][];
+        ids = new int[markers.Count];
+        int count = 0;
+        foreach (int key in markers.Keys) {
+            Marker val = markers[key];
+            corners[count] = markers[key].corners;
+            ids[count] = key;
+            ++count;
+        }
         //print("detected: " + ids.Length);
         //refineDetectedMarkers(image, arucoBoard, corners, ids, rejected, webCamera.cameraMatrixMat, webCamera.distCoeffsMat, 10.0f, 3.0f, true, out recovered, parameters);
     }
@@ -127,7 +152,7 @@ public class MarkerDetection : MonoBehaviour {
     {
         float rnorm = new Vector3((float)rvec[0], (float)rvec[1], (float)rvec[2]).magnitude;
         Quaternion relRot = Quaternion.AngleAxis(rnorm * 180f / Mathf.PI,
-            new Vector3((float)rvec[0] / rnorm, (float)rvec[1] / rnorm, (float)rvec[2] / rnorm));
+            new Vector3(-(float)rvec[0] / rnorm, (float)rvec[1] / rnorm, -(float)rvec[2] / rnorm));
 
         return relRot;
     }
@@ -144,20 +169,19 @@ public class MarkerDetection : MonoBehaviour {
         CvAruco.DrawDetectedMarkers(image, corners, ids);
         //CvAruco.DrawAxis(image, webCamera.RectifiedCameraMat, webCamera.distCoeffsArray, UndistortedDistCoeffs,
         //MarkerRvecs[cameraId][dictionary].At(i), MarkerTvecs[cameraId][dictionary].At(i), estimatePoseMarkerLength);
-        //print("markers " + markers.Count);
-        //print("singleCubes " + singleCubes.Length);
-        for (int i = 0; i < markers.Count; i++) {
+        
+        foreach (int key in markers.Keys) {
             //for(int j = 0; j < 4; j++) {
                 //Cv2.Circle(image, (int)markers[i].corners[j].X, (int)markers[i].corners[j].Y, j + 1, Scalar.Blue);
             //}
-            CvAruco.DrawAxis(image, webCamera.cameraMatrix, webCamera.distCoeffsArray, markers[i].rvec, markers[i].tvec, 0.03f);
-            singleCubes[i].transform.position = new Vector3((float)markers[i].tvec[0], (float)markers[i].tvec[1], (float)markers[i].tvec[2]);
-            singleCubes[i].transform.rotation = RvecToQuat(markers[i].rvec);
-            singleCubes[i].SetActive(true);
+            CvAruco.DrawAxis(image, webCamera.cameraMatrix, webCamera.distCoeffsArray, markers[key].rvec, markers[key].tvec, 0.03f);
+            singleCubes[key].transform.position = new Vector3((float)markers[key].tvec[0], -(float)markers[key].tvec[1], (float)markers[key].tvec[2]);
+            singleCubes[key].transform.rotation = RvecToQuat(markers[key].rvec);
+            singleCubes[key].SetActive(true);
         }
         if(markers.Count > 0) {
             CvAruco.DrawAxis(image, webCamera.cameraMatrix, webCamera.distCoeffsArray, rvec, tvec, 0.2f);
-            cube.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+            cube.position = new Vector3((float)tvec[0], -(float)tvec[1], (float)tvec[2]);
             cube.rotation = RvecToQuat(rvec);
             cube.gameObject.SetActive(true);
         }
