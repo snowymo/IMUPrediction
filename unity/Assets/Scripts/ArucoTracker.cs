@@ -17,7 +17,10 @@ public struct GridBoard
     int firstMarker;
     public int[] ids;
     public Point3f[][] objPoints;
+
     public List<List<Point3f>> objPtsList;
+    public List<Point3f> singleCorners;
+
 
     public GridBoard(int x, int y, float length, float separation, Dictionary dict)
     {
@@ -59,6 +62,12 @@ public struct GridBoard
                 count++;
             }
         }
+
+        singleCorners = new List<Point3f>();
+        singleCorners.Add(new Point3f(0, 0, 0));
+        singleCorners.Add(singleCorners[0] + new Point3f(markersLength, 0, 0));
+        singleCorners.Add(singleCorners[0] + new Point3f(markersLength, -markersLength, 0));
+        singleCorners.Add(singleCorners[0] + new Point3f(0, -markersLength, 0));
     }
 
 }
@@ -512,7 +521,7 @@ public class ArucoTracker : MonoBehaviour
 
         }
         //
-        backgroundTexture.material.mainTexture = MatToTexture(imgCopy);
+        //backgroundTexture.material.mainTexture = MatToTexture(imgCopy);
         //
 
         //cv_viewer.GetComponent<Renderer>().material.mainTexture = image;//MatToTexture(imgCopy, null);
