@@ -1,8 +1,5 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using OpenCvSharp;
-using OpenCvSharp.Aruco;
 using static OpenCvSharp.Unity;
 
 
@@ -14,25 +11,28 @@ public class ArucoCamera : MonoBehaviour {
     public Renderer background;
     public Camera bgCamera;
     public GameObject originalImage;
+    MarkerDetection markerDetector;
 
-    double[,] cameraMatrix;
-    float image_height = 480, image_width = 640;
-    Vector2 cameraF;
+    public double[,] cameraMatrix;
+    public float image_height = 480, image_width = 640;
+    public Vector2 cameraF;
     Vector2 principalPoint = new Vector2(320.0f, 240.0f);
     float cameraBackgroundDistance = 1f;
     double[] RectifiedCameraMatrices;
     double[] cameraMatrixArray;
-    double[] distCoeffsArray;
-    Mat cameraMatrixMat, distCoeffsMat, RectifiedCameraMat;
-    Size imageSize;
+    public double[] distCoeffsArray;
+    public Mat cameraMatrixMat, distCoeffsMat, RectifiedCameraMat;
+    public Size imageSize;
     OpenCvSharp.Rect noROI = new OpenCvSharp.Rect();
-    Mat RectificationMat;
+    public Mat RectificationMat;
     double[] noRectificationMatrix = new double[0];
-    Mat UndistortionRectificationMaps1 = new Mat(480, 640, MatType.CV_16SC2),
+    public Mat UndistortionRectificationMaps1 = new Mat(480, 640, MatType.CV_16SC2),
         UndistortionRectificationMaps2 = new Mat(480, 640, 2);
 
     // Use this for initialization
     void Start () {
+        markerDetector = GameObject.Find("ArucoTracker").GetComponent<MarkerDetection>();
+
         if (backCam == null)
             backCam = new WebCamTexture();
         imageTexture = new Texture2D((int)image_width, (int)image_height);
@@ -51,13 +51,14 @@ public class ArucoCamera : MonoBehaviour {
 	void Update () {
         Mat img = TextureToMat(backCam, null);
 
-        // zhenyi remap
-        UndistortRectifyImages(img);
-        undistortTexture = MatToTexture(img);
-        background.material.mainTexture = undistortTexture;
+        UndistortRectifyImages(img); 
 
         //Mat imgCopy = new Mat();
         //img.CopyTo(imgCopy);
+        markerDetector.ProcessFrame(img);
+
+        undistortTexture = MatToTexture(img);
+        background.material.mainTexture = undistortTexture;
 
         img.Dispose();
     }
@@ -66,8 +67,8 @@ public class ArucoCamera : MonoBehaviour {
     {
         // zhenyi
         cameraMatrix = new double[3, 3];
-        cameraMatrix[0, 0] = 540.01955364602134;        cameraMatrix[0, 1] = 0;        cameraMatrix[0, 2] = 294.76282342359644;
-        cameraMatrix[1, 0] = 0;        cameraMatrix[1, 1] = 565.86980782912451;        cameraMatrix[1, 2] = 299.38921380782074;
+        cameraMatrix[0, 0] = 646.6561;        cameraMatrix[0, 1] = 0;        cameraMatrix[0, 2] = 324.4815;
+        cameraMatrix[1, 0] = 0;        cameraMatrix[1, 1] = 647.4403;        cameraMatrix[1, 2] = 240.9121;
         cameraMatrix[2, 0] = 0;        cameraMatrix[2, 1] = 0;        cameraMatrix[2, 2] = 1;
         distCoeffsArray = new double[5];
         cameraMatrixArray = new double[9];
@@ -75,7 +76,7 @@ public class ArucoCamera : MonoBehaviour {
             cameraMatrixArray[i] = cameraMatrix[i / 3, i % 3];
         }
         cameraMatrixMat = new Mat(3, 3, MatType.CV_64FC1, cameraMatrixArray);
-        distCoeffsMat = new Mat(1, 5, MatType.CV_64FC1, distCoeffsArray);
+        //distCoeffsMat = new Mat(1, 5, MatType.CV_64FC1, distCoeffsArray);
         //    Debug.Log("cameraMatrix\t"
         //+ cameraMatrixArray[0, 0] + "\t" + cameraMatrixArray[0, 1] + "\t" + cameraMatrixArray[0, 2] + "\t"
         //+ cameraMatrixArray[1, 0] + "\t" + cameraMatrixArray[1, 1] + "\t" + cameraMatrixArray[1, 2] + "\t"
@@ -85,6 +86,9 @@ public class ArucoCamera : MonoBehaviour {
         distCoeffsArray[2] = 0.0121538382238777;
         distCoeffsArray[3] = 0.050890060910626686;
         distCoeffsArray[4] = -111.11737159034945;
+        //
+        distCoeffsArray = new double[5] { 0f,0f,0f,0f,0f };
+        distCoeffsMat = new Mat(1, 5, MatType.CV_64FC1, distCoeffsArray);
         imageSize = new Size(image_width, image_height);
         RectifiedCameraMatrices = new double[9];
     }

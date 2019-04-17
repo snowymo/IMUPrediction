@@ -156,5 +156,37 @@ namespace OpenCvSharp.Aruco
 				length
 			);
 		}
-	}
+
+        /// <summary>
+		/// Draw coordinate system axis from pose estimation. 
+		/// Given the pose estimation of a marker or board, this function draws the axis of the world coordinate system, 
+		/// i.e. the system centered on the marker/board. Useful for debugging purposes.
+		/// </summary>
+		/// <param name="image">input/output image. It must have 1 or 3 channels. The number of channels is not altered.</param>
+		/// <param name="cameraMatrix">	input 3x3 floating-point camera matrix A=⎡⎣⎢⎢⎢fx000fy0cxcy1⎤⎦⎥⎥⎥</param>
+		/// <param name="distCoeffs">vector of distortion coefficients (k1,k2,p1,p2[,k3[,k4,k5,k6],[s1,s2,s3,s4]]) of 4, 5, 8 or 12 elements</param>
+		/// <param name="rvec">rotation vector of the coordinate system that will be drawn</param>
+		/// <param name="tvec">translation vector of the coordinate system that will be drawn.</param>
+		/// <param name="length">ength of the painted axis in the same unit than tvec (usually in meters)</param>
+		public static void DrawAxis(
+            InputArray image,
+            InputArray cameraMatrix,
+            double[] distCoeffsArray,
+            double[] rvec, double[] tvec,
+            float length)
+        {
+            if (cameraMatrix == null)
+                throw new ArgumentNullException("nameof(cameraMatrix)");
+            cameraMatrix.ThrowIfDisposed();
+
+
+            NativeMethods.aruco_drawAxis(
+                image.CvPtr,
+                cameraMatrix.CvPtr,
+                distCoeffsArray, distCoeffsArray.Length,
+                rvec, tvec,
+                length
+            );
+        }
+    }
 }
