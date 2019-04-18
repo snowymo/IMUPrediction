@@ -124,6 +124,11 @@ public class ArucoCamera : MonoBehaviour
         cameraMatrix[0, 0] = 2408.75f; cameraMatrix[0, 1] = 0; cameraMatrix[0, 2] = 961.99f;//1279.48f;
         cameraMatrix[1, 0] = 0; cameraMatrix[1, 1] = 2401.26f; cameraMatrix[1, 2] = 1279.48f;//961.99f;
         cameraMatrix[2, 0] = 0; cameraMatrix[2, 1] = 0; cameraMatrix[2, 2] = 1;
+		// zhenyi
+		cameraMatrix[0, 0] = 611.166972217161f; cameraMatrix[0, 1] = 0; cameraMatrix[0, 2] = 320.601494629783f;
+        cameraMatrix[1, 0] = 0; cameraMatrix[1, 1] = 612.474596474278f; cameraMatrix[1, 2] = 238.664646266522f;
+        cameraMatrix[2, 0] = 0; cameraMatrix[2, 1] = 0; cameraMatrix[2, 2] = 1;
+		principalPoint = new Vector2(320.601494629783f, 238.664646266522f);
 #endif
         distCoeffsArray = new double[5];
         cameraMatrixArray = new double[9];
