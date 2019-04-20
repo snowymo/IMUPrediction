@@ -18,9 +18,15 @@ EditorBuildSettings:
     path: Assets/XRClassroom.unity
     guid: ff3407e0e19984273bb7fa58cfc20016
   - enabled: 0
-    path: Assets/demo.unity
-    guid: 86534db7c751a472b8a224748c7aa44a
-  - enabled: 1
+    path: 
+    guid: 00000000000000000000000000000000
+  - enabled: 0
     path: Assets/MiraSDK/Scenes/Tutorials/102_ControllerInteractions.unity
     guid: 73b843499980d493ea21ac1ba80a5153
+  - enabled: 1
+    path: Assets/NativeCamera.unity
+    guid: 3cfcc3912f77d44879624c08d4dbeee0
+  - enabled: 0
+    path: Assets/test.unity
+    guid: d4934a6305a41463392a327ccb52da5f
   m_configObjects: {}
