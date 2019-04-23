@@ -4,17 +4,25 @@ using UnityEngine;
 
 public class SensorFusion : MonoBehaviour
 {
-    public ArucoTracker tracker;
+    //public ArucoTracker tracker;
+    public ArucoCamera tracker;
     public Predictor imu;
 
-
+    Quaternion unityToIphone(Quaternion q){
+        return new Quaternion(-q.x, -q.y, q.z, q.w);
+    }
 
     void UpdateTracking(){
         //TODO: There might need to be an offset 
         //because we want the center of the board.
+
+        Debug.Log("###In here...");
+        //THIS IS CORRECT.
+        //this.transform.rotation = Quaternion.Euler(-90, 0, 0) * Quaternion.Inverse(unityToIphone(tracker.markerDetector.current_rotation));
+    
         Quaternion imu_rot = imu.iphone2unity(imu.calculated_pose * Quaternion.Euler(0, -45, 0));
         Quaternion inv = Quaternion.Inverse(imu_rot);
-        Quaternion optical = tracker.rotation_vec * inv;
+        Quaternion optical = this.transform.rotation = Quaternion.Euler(-90, 0, 0) * Quaternion.Inverse(unityToIphone(tracker.markerDetector.current_rotation)) * inv;
 
         Quaternion old_orientation = this.transform.rotation;
 
@@ -38,7 +46,8 @@ public class SensorFusion : MonoBehaviour
         Vector3 eulerY = yRot.eulerAngles;
         Vector3 eulerImu = imu_rot.eulerAngles;
         Vector3 final_rotation = new Vector3(eulerImu.x, eulerY.y, eulerImu.z);
-        this.transform.rotation = Quaternion.Euler(final_rotation);
+        this.transform.rotation = Quaternion.Euler(final_rotation);*/
+
     }
 
     // Start is called before the first frame update
@@ -50,9 +59,28 @@ public class SensorFusion : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (imu.receiver.initiated && tracker.initiated)
-        {
-            UpdateTracking();
+        if(tracker != null){
+            if (tracker.isInitiated)
+            {
+                Debug.Log("IN FIRST IF");
+                if (tracker.markerDetector.isInitiated)
+                {
+                    Debug.Log("IN SECOND IF");
+                    UpdateTracking();
+                }
+            }
         }
+       
+
+
+        /*
+        if (imu.receiver.initiated && tracker.isInitiated)
+        {
+            Debug.Log("IN FIRST IF");
+            if(tracker.markerDetector.isInitiated){
+                Debug.Log("IN SECOND IF");
+                UpdateTracking();
+            }
+        }*/
     }
 }

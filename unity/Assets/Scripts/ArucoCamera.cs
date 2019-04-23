@@ -11,14 +11,14 @@ public class ArucoCamera : MonoBehaviour
 	//When Using Mac Cam:
 	public bool isShowingTexture;
 	[SerializeField]
-	bool isInitiated;
+	public bool isInitiated;
 
 	static WebCamTexture backCam;
 	static Texture2D imageTexture, undistortTexture;
 	public Renderer background;
-	public Camera bgCamera;
+	//public Camera bgCamera;
 	public GameObject originalImage;
-	MarkerDetection markerDetector;
+	public MarkerDetection markerDetector;
 
 	public double[,] cameraMatrix;
 	public float image_height, image_width;
@@ -49,7 +49,7 @@ public class ArucoCamera : MonoBehaviour
 	// Use this for initialization
 	void Start()
 	{
-		isShowingTexture = true;
+		//isShowingTexture = true;
 
 		isInitiated = false;
 		distCoeffsArray = new double[5];
@@ -57,7 +57,8 @@ public class ArucoCamera : MonoBehaviour
 		RectifiedCameraMatrices = new double[9];
 		cameraMatrix = new double[3, 3];
 
-		background.enabled = isShowingTexture;
+        if(isShowingTexture)
+		    background.enabled = true;
 
 		markerDetector = GameObject.Find("ArucoTracker").GetComponent<MarkerDetection>();
 
@@ -96,10 +97,9 @@ public class ArucoCamera : MonoBehaviour
 	void Update()
 	{
 		Mat img = TextureToMat(backCam, null);
-
 		image_height = img.Height;
 		image_width = img.Width;
-		if (image_height > 100)
+		if (image_height > 100  && !isInitiated)
 		{
 			Debug.Log("h:" + img.Height + " w:" + img.Width);
 			initWithNumbers();
@@ -113,6 +113,7 @@ public class ArucoCamera : MonoBehaviour
 			isInitiated = true;
 		}
 
+      
 		// zhenyi remap
 		//UndistortRectifyImages(img);
 		if (isInitiated)
@@ -127,6 +128,7 @@ public class ArucoCamera : MonoBehaviour
 				background.material.mainTexture = undistortTexture;
 			}
 		}
+		
 		img.Dispose();
 	}
 
@@ -159,12 +161,17 @@ public class ArucoCamera : MonoBehaviour
         cameraMatrix[2, 0] = 0; cameraMatrix[2, 1] = 0; cameraMatrix[2, 2] = 1;
 		// zhenyi iphone
 		if(devName == DeviceName.ZhenyiIphone){
-			cameraMatrix[0, 0] = 611.166972217161f; cameraMatrix[0, 1] = 0; cameraMatrix[0, 2] = 320.601494629783f;
-	        cameraMatrix[1, 0] = 0; cameraMatrix[1, 1] = 612.474596474278f; cameraMatrix[1, 2] = 238.664646266522f;
+			cameraMatrix[0, 0] = 611.166972217161f; cameraMatrix[0, 1] = 0; cameraMatrix[0, 2] = 327.284140948185f;
+	        cameraMatrix[1, 0] = 0; cameraMatrix[1, 1] = 612.474596474278f; cameraMatrix[1, 2] = 244.417925187648f;
 	        cameraMatrix[2, 0] = 0; cameraMatrix[2, 1] = 0; cameraMatrix[2, 2] = 1;
 		}
+        if(devName == DeviceName.AlexIphone){
+            cameraMatrix[0, 0] = 608.123781700575f; cameraMatrix[0, 1] = 0; cameraMatrix[0, 2] = 320.601494629783f;
+            cameraMatrix[1, 0] = 0; cameraMatrix[1, 1] = 610.539524247411f; cameraMatrix[1, 2] = 238.664646266522f;
+            cameraMatrix[2, 0] = 0; cameraMatrix[2, 1] = 0; cameraMatrix[2, 2] = 1;
+        }
 #endif
-		principalPoint = new Vector2((float)cameraMatrix[0, 2], (float)cameraMatrix[1, 2]);
+        principalPoint = new Vector2((float)cameraMatrix[0, 2], (float)cameraMatrix[1, 2]);
 		for (int i = 0; i < 9; i++)
 		{
 			cameraMatrixArray[i] = cameraMatrix[i / 3, i % 3];
@@ -203,8 +210,9 @@ public class ArucoCamera : MonoBehaviour
 	{
 		//background.material.mainTexture = backCam;
 		//background.material.mainTexture = undistortTexture;
-		float fovY = 2f * Mathf.Atan(0.5f * image_height / cameraF.y) * Mathf.Rad2Deg;
-		bgCamera.fieldOfView = fovY;
+
+		//float fovY = 2f * Mathf.Atan(0.5f * image_height / cameraF.y) * Mathf.Rad2Deg;
+		//bgCamera.fieldOfView = fovY;
 
 		float localPositionX = (0.5f * image_width - principalPoint.x) / cameraF.x * cameraBackgroundDistance;
 		float localPositionY = -(0.5f * image_height - principalPoint.y) / cameraF.y * cameraBackgroundDistance; // a minus because OpenCV camera coordinates origin is top - left, but bottom-left in Unity
@@ -214,9 +222,12 @@ public class ArucoCamera : MonoBehaviour
 		float localScaleX = image_width / cameraF.x * cameraBackgroundDistance;
 		float localScaleY = image_height / cameraF.y * cameraBackgroundDistance;
 
-		// Place and scale the background
-		background.transform.localPosition = new Vector3(localPositionX, localPositionY, cameraBackgroundDistance);
-		background.transform.localScale = new Vector3(localScaleX, localScaleY, 1);
+        // Place and scale the background
+        if (isShowingTexture){
+            background.transform.localPosition = new Vector3(localPositionX, localPositionY, cameraBackgroundDistance);
+            background.transform.localScale = new Vector3(localScaleX, localScaleY, 1);
+        }
+         
 	}
 
 	void UndistortRectifyImages(Mat image)

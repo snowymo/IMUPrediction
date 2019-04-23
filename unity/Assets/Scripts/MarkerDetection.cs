@@ -56,9 +56,13 @@ public class MarkerDetection : MonoBehaviour
 	Vector3 boardT;
 	Quaternion boardR;
 
+    public bool isInitiated;
+    public Quaternion current_rotation;
+
 	// Use this for initialization
 	void Start()
 	{
+        isInitiated = false;
 		webCamera = GameObject.Find("Camera").GetComponent<ArucoCamera>();
 		singleCubes = new GameObject[arucoBoard.ids.Length];
 		for (int i = 0; i < singleCubes.Length; i++)
@@ -82,24 +86,34 @@ public class MarkerDetection : MonoBehaviour
 		}
 	}
 
-	public void ProcessFrame(Mat image, bool wantToDraw = false)
-	{
-		detect(image);
+    public void ProcessFrame(Mat image, bool wantToDraw = false)
+    {
+        detect(image);
 
-		foreach (int key in markers.Keys)
-			estimateSingleMarker(markers[key]);
+       
+        foreach (int key in markers.Keys)
+            estimateSingleMarker(markers[key]);
 
-		estimateBoard();
-		if(wantToDraw)
-			drawAxes(image);//optional
+        estimateBoard();
+        if (wantToDraw)
+            drawAxes(image);//optional
 
-		fixY();
+        fixY();
 
-		if(wantToDraw)
-			drawCubes(image);//optional
-	}
+        if(wantToDraw)
+            drawCubes(image);//optional
 
-	List<int> lowConfIds = new List<int>();
+
+        if (markers.Count > 0)
+        {
+            current_rotation = RvecToQuat(rvec);
+            isInitiated = true;
+        }
+
+
+    }
+    List<int> lowConfIds = new List<int>();
+   
 	void detect(Mat image)
 	{
 		CvAruco.DetectMarkers(image, dictionary, out corners, out ids, parameters, out rejected);
@@ -195,9 +209,12 @@ public class MarkerDetection : MonoBehaviour
 		}
 		if (markers.Count > 0)
 		{
+
 			cube.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
 			cube.rotation = RvecToQuat(rvec);
-			cube.gameObject.SetActive(true);
+            current_rotation = RvecToQuat(rvec);
+            isInitiated = true;
+            cube.gameObject.SetActive(true);
 		}
 	}
 
