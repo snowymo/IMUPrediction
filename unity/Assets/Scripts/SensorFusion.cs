@@ -25,6 +25,7 @@ public class SensorFusion : MonoBehaviour
         //return new Quaternion(-q.y, -q.x, q.z, q.w);
     }
 
+    Quaternion yRot = Quaternion.identity;
     void UpdateTracking(){
         //TODO: There might need to be an offset 
         //because we want the center of the board.
@@ -73,38 +74,48 @@ public class SensorFusion : MonoBehaviour
         else if(rotation_mode == Mode.IMU){
             //THIS CORRECT IMU (headset needs to be face down)
             this.transform.rotation = imu.iphone2unity(imu.calculated_pose * Quaternion.Euler(0, -45, 0));
+            Debug.Log(" IMU: " + transform.rotation.eulerAngles);
         }
         else if(rotation_mode == Mode.SensorFusion){
             Quaternion imu_rot = imu.iphone2unity(imu.calculated_pose * Quaternion.Euler(0, -45, 0));
             Quaternion inv = Quaternion.Inverse(imu_rot);
-            Quaternion optical = this.transform.rotation = Quaternion.Euler(-90, 0, 0) * Quaternion.Inverse(unityToIphone(tracker.markerDetector.current_rotation)) * inv;
+            Quaternion aruco_rot = Quaternion.Inverse(Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * unityToIphone(tracker.markerDetector.current_rotation));
+            Quaternion aruco_sign = new Quaternion(aruco_rot.x, -aruco_rot.y, -aruco_rot.z, -aruco_rot.w);
+            Quaternion optical = aruco_sign * inv;
 
             Quaternion old_orientation = this.transform.rotation;
 
-            float yOpt = optical.eulerAngles.y;
-            float yOld = old_orientation.eulerAngles.y;
-            float yDiff = Mathf.Abs(yOpt - yOld);
-            if (yDiff > 180f)
+            if (tracker.markerDetector.isTracked)
             {
-                if (yOpt < yOld)
+                float yOpt = optical.eulerAngles.z;
+                float yOld = old_orientation.eulerAngles.y;
+                float yDiff = Mathf.Abs(yOpt - yOld);
+                if (yDiff > 180f)
                 {
-                    yOpt += 360f;
+                    if (yOpt < yOld)
+                    {
+                        yOpt += 360f;
+                    }
+                    else
+                    {
+                        yOld += 360f;
+                    }
+                    yDiff = Mathf.Abs(yOpt - yOld);
                 }
-                else
-                {
-                    yOld += 360f;
-                }
-                yDiff = Mathf.Abs(yOpt - yOld);
-            }
-            float t = Mathf.Abs(yOpt - yOld);
-            t = t * t;
-            float yNew = Mathf.LerpAngle(yOld, yOpt, t);
+                float t = Mathf.Abs(yOpt - yOld);
+                t = t * t;
+                float yNew = Mathf.LerpAngle(yOld, yOpt, t);
 
-            Quaternion yRot = Quaternion.AngleAxis(yNew, Vector3.up);
-            Vector3 eulerY = yRot.eulerAngles;
-            Vector3 eulerImu = imu_rot.eulerAngles;
-            Vector3 final_rotation = new Vector3(eulerImu.x, eulerY.y, eulerImu.z);
-            this.transform.rotation = Quaternion.Euler(final_rotation);
+                yRot = Quaternion.AngleAxis(yNew, Vector3.up);
+
+            }
+            transform.rotation = yRot * imu_rot;
+
+            //When ARUCO tracking stops it gives a random value, we should have a threshold for this.
+
+            //Debug.Log("Y rot:" + yRot.eulerAngles);
+            //Debug.Log("Sensor Fusion:" + transform.rotation.eulerAngles + " IMU: " + imu_rot.eulerAngles + " ARUCO:" + aruco_sign.eulerAngles );
+            Debug.Log("Sensor Fusion:" + transform.rotation.eulerAngles + " yrot: " + yRot.eulerAngles + " ARUCO:" + aruco_sign.eulerAngles + " IMU: " + imu_rot.eulerAngles);
         }
 
 

@@ -134,7 +134,6 @@ public class Predictor : MonoBehaviour
         //Vector3 gyro = new Vector3(gyroData.Value.x, gyroData.Value.z, gyroData.Value.y);
         //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.x, gyroData.Value.y);
         //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.y, gyroData.Value.x);
-        Debug.Log("test1:" + gyro);
         float event_time = gyroData.Key;
         Quaternion rotation;
         if(timestamp != 0){
@@ -236,7 +235,7 @@ public class Predictor : MonoBehaviour
             sumx += GetLatestGyroDataPair().Value.x;
             sumy += GetLatestGyroDataPair().Value.y;
             sumz += GetLatestGyroDataPair().Value.z;
-            Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
+            //Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
 
         }
     }

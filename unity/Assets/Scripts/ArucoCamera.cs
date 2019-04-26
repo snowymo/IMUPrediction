@@ -13,6 +13,7 @@ public class ArucoCamera : MonoBehaviour
 	[SerializeField]
 	public bool isInitiated;
 
+
 	static WebCamTexture backCam;
 	static Texture2D imageTexture, undistortTexture;
 	public Renderer background;

@@ -35,8 +35,9 @@ public class MarkerDetection : MonoBehaviour
 	public Transform cube;
 	public GameObject singleCube;
 	GameObject[] singleCubes;
+    public bool isTracked;
 
-	ArucoCamera webCamera;
+    ArucoCamera webCamera;
 
 	static Dictionary dictionary = CvAruco.GetPredefinedDictionary(PredefinedDictionaryName.DictArucoOriginal);
 	Dictionary<int, Marker> markers = new Dictionary<int, Marker>();
@@ -65,7 +66,8 @@ public class MarkerDetection : MonoBehaviour
 	void Start()
 	{
         isInitiated = false;
-		webCamera = GameObject.Find("Camera").GetComponent<ArucoCamera>();
+        isTracked = false;
+        webCamera = GameObject.Find("Camera").GetComponent<ArucoCamera>();
 		singleCubes = new GameObject[arucoBoard.ids.Length];
 		for (int i = 0; i < singleCubes.Length; i++)
 		{
@@ -110,6 +112,7 @@ public class MarkerDetection : MonoBehaviour
         {
             current_rotation = RvecToQuat(rvec);
             isInitiated = true;
+            isTracked = true;
         }
 
 
