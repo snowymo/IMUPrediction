@@ -13,6 +13,8 @@ public class Predictor : MonoBehaviour
     private float timestamp2;
     public GameObject world;
     public UDPReceiver receiver;
+
+
     int iters = 0;
     float sumx = 0;
     float sumy = 0;
@@ -20,10 +22,10 @@ public class Predictor : MonoBehaviour
 
     //Drift factor
     //float x_const = -0.0007957f;
-    float x_const = -0.0008073f;
+    float x_const = -0.09709864f;
     //float y_const = -0.0004028f;
-    float y_const = -0.0003908f;
-    float z_const = -0.0000354f;
+    float y_const = -0.04644096f;
+    float z_const = -0.003673066f;
 
     public int history_length = 15;
     public float lag = 0.03f;
@@ -125,7 +127,8 @@ public class Predictor : MonoBehaviour
 
 
     public Quaternion GyroToQuat(KeyValuePair<float,Vector3> gyroData, bool drift){
-        Vector3 gyro = gyroData.Value;
+        Vector3 gyro = new Vector3(gyroData.Value.x - x_const, gyroData.Value.y - y_const, gyroData.Value.z - z_const);
+
         //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.z, gyroData.Value.x);//correct
         //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.x, gyroData.Value.z);
         //Vector3 gyro = new Vector3(gyroData.Value.x, gyroData.Value.z, gyroData.Value.y);
@@ -148,7 +151,7 @@ public class Predictor : MonoBehaviour
             float cosThetaOverTwo = Mathf.Cos(thetaOverTwo);
             //Debug.Log("Quat");
             //Debug.Log(sinThetaOverTwo * gyro.x + " " + sinThetaOverTwo * gyro.y + " " + sinThetaOverTwo * gyro.z + " " + cosThetaOverTwo);
-            Vector3 v = new Vector3(sinThetaOverTwo * gyro.x - x_const, sinThetaOverTwo * gyro.y - y_const, sinThetaOverTwo * gyro.z - z_const);
+            Vector3 v = new Vector3(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z);
             //Vector3 v = new Vector3(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z);
             //v.x *= -1;
             //v.y *= -1;
@@ -225,6 +228,15 @@ public class Predictor : MonoBehaviour
             calculated_pose =  calculated_pose * (imuquat);
             world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
             output_rot.text = "IMU: "+world.transform.rotation.ToString();
+
+
+
+            //Debug
+            iters++;
+            sumx += GetLatestGyroDataPair().Value.x;
+            sumy += GetLatestGyroDataPair().Value.y;
+            sumz += GetLatestGyroDataPair().Value.z;
+            Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
 
         }
     }

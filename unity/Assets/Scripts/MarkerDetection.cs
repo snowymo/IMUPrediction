@@ -47,9 +47,11 @@ public class MarkerDetection : MonoBehaviour
 	DetectorParameters parameters = DetectorParameters.Create();
 
 	Mat UndistortedDistCoeffs = new Mat();
-	//Make Gridboard Object
-	GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
-	Mat grey;
+    //Make Gridboard Object
+    //GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
+    GridBoard arucoBoard = new GridBoard(2, 3, 0.08f, 0.00397f, dictionary);
+
+    Mat grey;
 	double[] rvec; double[] tvec;
 	List<int> recovered = new List<int>();
 
@@ -131,7 +133,7 @@ public class MarkerDetection : MonoBehaviour
 		lowConfIds.Clear();
 		for (int i = 0; i < ids.Length; i++)
 		{
-			if (ids[i] < 12)
+            if (ids[i] < arucoBoard.ids.Length)
 			{
 				if (!markers.ContainsKey(ids[i]))
 				{
