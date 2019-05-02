@@ -49,8 +49,8 @@ public class MarkerDetection : MonoBehaviour
 
 	Mat UndistortedDistCoeffs = new Mat();
     //Make Gridboard Object
-    //GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
-    GridBoard arucoBoard = new GridBoard(2, 3, 0.08f, 0.00397f, dictionary);
+    GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
+    //GridBoard arucoBoard = new GridBoard(8, 6, 0.08f, 0.002f, dictionary);
 
     Mat grey;
 	double[] rvec; double[] tvec;
@@ -61,6 +61,7 @@ public class MarkerDetection : MonoBehaviour
 
     public bool isInitiated;
     public Quaternion current_rotation;
+    public Vector3 current_position;
 
 	// Use this for initialization
 	void Start()
@@ -82,6 +83,15 @@ public class MarkerDetection : MonoBehaviour
 
 	}
 
+    Vector3 averageTvec(){
+        Vector3 average_origin = new Vector3(0, 0, 0);
+        foreach (Marker marker in markers.Values)
+        {
+            average_origin += new Vector3((float)marker.tvec[0], (float)marker.tvec[1], (float)marker.tvec[2]);
+        }
+        return average_origin/markers.Values.Count;
+    }
+
 	void hideCubes()
 	{
 		for (int i = 0; i < singleCubes.Length; i++)
@@ -97,7 +107,7 @@ public class MarkerDetection : MonoBehaviour
        
         foreach (int key in markers.Keys)
             estimateSingleMarker(markers[key]);
-
+           
         estimateBoard();
         if (wantToDraw)
             drawAxes(image);//optional
@@ -111,8 +121,14 @@ public class MarkerDetection : MonoBehaviour
         if (markers.Count > 0)
         {
             current_rotation = RvecToQuat(rvec);
+            current_position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+            Debug.Log("AVERAGE TVEC:" + averageTvec().ToString("F3"));
+            Debug.Log("BOARD TVEC:" + current_position.ToString("F3"));
             isInitiated = true;
             isTracked = true;
+        }
+        else{
+            isTracked = false;
         }
 
 
@@ -217,7 +233,10 @@ public class MarkerDetection : MonoBehaviour
 
 			cube.position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
 			cube.rotation = RvecToQuat(rvec);
-            current_rotation = RvecToQuat(rvec);
+
+            //current_position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
+            //current_rotation = RvecToQuat(rvec);
+
             isInitiated = true;
             cube.gameObject.SetActive(true);
 		}
@@ -250,17 +269,37 @@ public class MarkerDetection : MonoBehaviour
 		}
 	}
 
-	void estimateSingleMarker(Marker marker)
-	{
-		List<Point3f> objPoints = new List<Point3f>();
-		List<Point2f> imgPoints = new List<Point2f>();
-		getBoardObjectAndImagePoints(arucoBoard, new Point2f[][] { marker.corners }, new int[] { marker.id }, out objPoints, out imgPoints);
-		//print("id:" + marker.id);
-		//print("objPoints:" + objPoints.Count);
-		//        if (objPoints.Count == 4)
-		//            print("objPoints:" + objPoints[0] + "\t" + objPoints[1] + "\t" + objPoints[2] + "\t" + objPoints[3]);
-		Cv2.SolvePnP(arucoBoard.singleCorners, marker.corners, webCamera.cameraMatrix, webCamera.distCoeffsArray, out marker.rvec, out marker.tvec);
-	}
+    void estimateSingleMarker(Marker marker)
+    {
+        List<Point3f> objPoints = new List<Point3f>();
+        List<Point2f> imgPoints = new List<Point2f>();
+        getBoardObjectAndImagePoints(arucoBoard, new Point2f[][] { marker.corners }, new int[] { marker.id }, out objPoints, out imgPoints);
+        //print("id:" + marker.id);
+        //print("objPoints:" + objPoints.Count);
+        //        if (objPoints.Count == 4)
+        //            print("objPoints:" + objPoints[0] + "\t" + objPoints[1] + "\t" + objPoints[2] + "\t" + objPoints[3]);
+
+        /*
+        Debug.Log("#Object Points:");
+        for (int i = 0; i < arucoBoard.singleCorners.Count; i++){
+            Debug.Log(arucoBoard.singleCorners[i].ToString());
+        }
+        Debug.Log("#######");
+        Debug.Log("$Marker Points:");
+        for (int i = 0; i < marker.corners.Length; i++)
+        {
+            Debug.Log(marker.corners[i].ToString());
+        }
+        Debug.Log("$$$$$");*/
+        Cv2.SolvePnP(arucoBoard.singleCorners, marker.corners, webCamera.cameraMatrix, webCamera.distCoeffsArray, out marker.rvec, out marker.tvec);
+        /*
+        Debug.Log("@@@MARKER TVEC:");
+        for (int i = 0; i < marker.tvec.Length; i++)
+        {
+            Debug.Log(marker.tvec[i].ToString("F3"));
+        }
+        Debug.Log("@@@@@");*/
+    }
 
 	void getBoardObjectAndImagePoints(GridBoard board, Point2f[][] detectedCorners, int[] detectedIds, out List<Point3f> objPoints, out List<Point2f> imgPoints)
 	{

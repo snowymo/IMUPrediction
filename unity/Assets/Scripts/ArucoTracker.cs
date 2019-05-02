@@ -129,8 +129,11 @@ public class ArucoTracker : MonoBehaviour
         };
 #endif    
         //objPoints = new Mat(1, objPnts.Length, MatType.CV_32F, objPnts);
-        cameraMatrix = intrinsicMat;
-        distCoeffs = new List<double>(radialTanDist);
+
+
+        //####WARNING FOR SOME REASON WON'T COMPILE BECAUSE OF THESE LINES SO I COMMENTED THEM OUT.
+        //cameraMatrix = intrinsicMat;
+       //distCoeffs = new List<double>(radialTanDist);
 
     }
 

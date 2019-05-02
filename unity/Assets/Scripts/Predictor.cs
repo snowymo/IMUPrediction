@@ -3,9 +3,24 @@ using System.Collections.Generic;
 using UnityEngine;
 using MathNet.Numerics.LinearAlgebra;
 using UnityEngine.UI;
+using Unity.Jobs;
+using Unity.Collections;
+
+public struct IMU : IJob
+{
+
+    public NativeArray<Quaternion> result;
+
+    public void Execute()
+    {
+        //result[0] = a + b;
+        result[0] = Input.gyro.attitude;
+    }
+}
 
 public class Predictor : MonoBehaviour
 {
+
     List<KeyValuePair<float, Vector3>> gyro_history;
     List<KeyValuePair<float, Vector3>> gyro_predictions;
     private static float NS2S = 1.0f / 1000000000.0f;
@@ -221,9 +236,10 @@ public class Predictor : MonoBehaviour
     {
         if (receiver.initiated)
         {
-           
 
-            Quaternion imuquat = GyroToQuat(GetLatestGyroDataPair(), true);
+
+            //Quaternion imuquat = GyroToQuat(GetLatestGyroDataPair(), true);
+            Quaternion imuquat = GyroToQuat(GetLatestPredictionPair(), true);
             calculated_pose =  calculated_pose * (imuquat);
             world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
             output_rot.text = "IMU: "+world.transform.rotation.ToString();

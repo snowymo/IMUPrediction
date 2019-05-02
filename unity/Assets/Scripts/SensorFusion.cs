@@ -15,6 +15,8 @@ public class SensorFusion : MonoBehaviour
     //public GameObject arucoCube;
     public UnityEngine.UI.Text button4cmr;
 
+    public bool positionTracking;
+
 
     Quaternion unityToIphone(Quaternion q){
         return new Quaternion(-q.x, -q.y, q.z, q.w);
@@ -26,6 +28,9 @@ public class SensorFusion : MonoBehaviour
     }
 
     Quaternion yRot = Quaternion.identity;
+    Quaternion prev_aruco = Quaternion.identity;
+    Quaternion prev_imu = Quaternion.identity;
+    Vector3 prev_pose;
     void UpdateTracking(){
         //TODO: There might need to be an offset 
         //because we want the center of the board.
@@ -60,7 +65,7 @@ public class SensorFusion : MonoBehaviour
 
             //Debug.Log("###Aruco Rotation:" + (Quaternion.Euler(90,0,0) * Quaternion.Euler(0, 180, 0)* unityToIphone(tracker.markerDetector.current_rotation)).eulerAngles);
          
-            Debug.Log("####ARUCO rotation:" + Quaternion.Inverse(Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * unityToIphone(tracker.markerDetector.current_rotation)).eulerAngles);
+            //Debug.Log("####ARUCO rotation:" + Quaternion.Inverse(Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * unityToIphone(tracker.markerDetector.current_rotation)).eulerAngles);
             //Debug.Log("#### Aruco with 45deg" + (tracker.markerDetector.current_rotation * Quaternion.Euler(0, 45, 0)).eulerAngles);
             //Debug.Log("#### Unity To Iphone" + unityToIphone(tracker.markerDetector.current_rotation * Quaternion.Euler(0, 45, 0)).eulerAngles);
             //Debug.Log("###Final Rotation:" + cameraQuatOptions[buttonIdx].eulerAngles);
@@ -108,14 +113,36 @@ public class SensorFusion : MonoBehaviour
 
                 yRot = Quaternion.AngleAxis(yNew, Vector3.up);
 
+                Quaternion imuTransform = imu_rot * Quaternion.Inverse(prev_imu);
+                Quaternion arucoTransform = aruco_sign * Quaternion.Inverse(prev_aruco);
+                float angleDiff = Quaternion.Angle(imuTransform, arucoTransform);
+
+                /*
+                if(imuTransform.eulerAngles != new Vector3(0,0,0)){
+                    Debug.Log("$TRACKED$ IMU Transform: " + imuTransform.eulerAngles + " ArUco Transform: " + arucoTransform.eulerAngles + " Angle Difference: " + angleDiff);
+                }*/
             }
+            else
+            {
+                Quaternion imuTransform = imu_rot * Quaternion.Inverse(prev_imu);
+                Quaternion arucoTransform = aruco_sign * Quaternion.Inverse(prev_aruco);
+                float angleDiff = Quaternion.Angle(imuTransform, arucoTransform);
+
+                //if (imuTransform.eulerAngles != new Vector3(0, 0, 0))
+                //{
+                //    Debug.Log("#UNTRACKED# IMU Transform: " + imuTransform.eulerAngles + " ArUco Transform: " + arucoTransform.eulerAngles + " Angle Difference: " + angleDiff);
+                //}
+            }
+
+            //Debug.Log("prev to current:" + Quaternion.Angle(transform.rotation, yRot * imu_rot));
             transform.rotation = yRot * imu_rot;
 
+
+            prev_aruco = aruco_sign;
+            prev_imu = imu_rot;
             //When ARUCO tracking stops it gives a random value, we should have a threshold for this.
 
-            //Debug.Log("Y rot:" + yRot.eulerAngles);
-            //Debug.Log("Sensor Fusion:" + transform.rotation.eulerAngles + " IMU: " + imu_rot.eulerAngles + " ARUCO:" + aruco_sign.eulerAngles );
-            Debug.Log("Sensor Fusion:" + transform.rotation.eulerAngles + " yrot: " + yRot.eulerAngles + " ARUCO:" + aruco_sign.eulerAngles + " IMU: " + imu_rot.eulerAngles);
+            //Debug.Log("Sensor Fusion:" + transform.rotation.eulerAngles + " yrot: " + yRot.eulerAngles + " ARUCO:" + aruco_sign.eulerAngles + " IMU: " + imu_rot.eulerAngles);
         }
 
 
@@ -172,5 +199,18 @@ public class SensorFusion : MonoBehaviour
             }
         }
 
+        if (positionTracking && tracker.markerDetector.isTracked)
+        {
+            Vector3 base_rot = -1 * new Vector3(tracker.markerDetector.current_position.x, -tracker.markerDetector.current_position.y, -tracker.markerDetector.current_position.z);
+            Debug.Log("Tracked position:" + (Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * base_rot).ToString("F3"));
+            prev_pose = Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * base_rot;
+            if(prev_pose != new Vector3(0,0,0)){
+                transform.position = Quaternion.Euler(45, 0, 0) * Quaternion.Euler(0, 180, 0) * base_rot;
+            }
+        }
+
+        else
+            transform.position = prev_pose;
+        //Debug.Log("position:" + transform.position.ToString("F3") + " Is tracked?:" + tracker.markerDetector.isTracked);
     }
 }

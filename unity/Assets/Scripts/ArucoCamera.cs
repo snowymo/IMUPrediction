@@ -90,6 +90,7 @@ public class ArucoCamera : MonoBehaviour
 			originalImage.GetComponent<Renderer>().material.mainTexture = backCam;
 		}
 
+
 		if (!backCam.isPlaying)
 			backCam.Play();
 	}
@@ -97,40 +98,45 @@ public class ArucoCamera : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		Mat img = TextureToMat(backCam, null);
-		image_height = img.Height;
-		image_width = img.Width;
-		if (image_height > 100  && !isInitiated)
-		{
-			Debug.Log("h:" + img.Height + " w:" + img.Width);
-			initWithNumbers();
 
-			loadCalibration();
+   
+            Mat img = TextureToMat(backCam, null);
+            image_height = img.Height;
+            image_width = img.Width;
+            if (image_height > 100 && !isInitiated)
+            {
+                Debug.Log("h:" + img.Height + " w:" + img.Width);
+                initWithNumbers();
 
-			InitializeRectificationAndUndistortionMaps();
+                loadCalibration();
 
-			configBackground();
+                InitializeRectificationAndUndistortionMaps();
 
-			isInitiated = true;
-		}
+                configBackground();
 
-      
-		// zhenyi remap
-		//UndistortRectifyImages(img);
-		if (isInitiated)
-		{
-			// undistortion
-			//UndistortRectifyImages(img);
+                isInitiated = true;
+            }
 
-			markerDetector.ProcessFrame(img, isShowingTexture);
-			if (isShowingTexture)
-			{
-				undistortTexture = MatToTexture(img);
-				background.material.mainTexture = undistortTexture;
-			}
-		}
-		
-		img.Dispose();
+
+            // zhenyi remap
+            //UndistortRectifyImages(img);
+            if (isInitiated)
+            {
+                // undistortion
+                //UndistortRectifyImages(img);
+
+                markerDetector.ProcessFrame(img, isShowingTexture);
+                if (isShowingTexture)
+                {
+                    undistortTexture = MatToTexture(img);
+                    background.material.mainTexture = undistortTexture;
+                }
+            }
+
+            img.Dispose();
+
+
+       
 	}
 
 	public void loadCalibration()
