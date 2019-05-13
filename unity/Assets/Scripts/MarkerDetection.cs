@@ -49,8 +49,8 @@ public class MarkerDetection : MonoBehaviour
 
 	Mat UndistortedDistCoeffs = new Mat();
     //Make Gridboard Object
-    GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
-    //GridBoard arucoBoard = new GridBoard(8, 6, 0.08f, 0.002f, dictionary);
+    //GridBoard arucoBoard = new GridBoard(3, 4, 0.048f, 0.0081f, dictionary);
+    GridBoard arucoBoard = new GridBoard(8, 6, 0.08f, 0.002f, dictionary);
 
     Mat grey;
 	double[] rvec; double[] tvec;
@@ -62,6 +62,7 @@ public class MarkerDetection : MonoBehaviour
     public bool isInitiated;
     public Quaternion current_rotation;
     public Vector3 current_position;
+    public Vector3 current_position_avg;
 
 	// Use this for initialization
 	void Start()
@@ -109,6 +110,7 @@ public class MarkerDetection : MonoBehaviour
             estimateSingleMarker(markers[key]);
            
         estimateBoard();
+        //estimateBoardAverage();
         if (wantToDraw)
             drawAxes(image);//optional
 
@@ -122,8 +124,6 @@ public class MarkerDetection : MonoBehaviour
         {
             current_rotation = RvecToQuat(rvec);
             current_position = new Vector3((float)tvec[0], (float)tvec[1], (float)tvec[2]);
-            Debug.Log("AVERAGE TVEC:" + averageTvec().ToString("F3"));
-            Debug.Log("BOARD TVEC:" + current_position.ToString("F3"));
             isInitiated = true;
             isTracked = true;
         }
@@ -264,10 +264,32 @@ public class MarkerDetection : MonoBehaviour
 		{
 			List<Point3f> objPoints = new List<Point3f>();
 			List<Point2f> imgPoints = new List<Point2f>();
+            //Pass corners[0],corners[1], corners[2]....then pass these through solvepnp, then get average
 			getBoardObjectAndImagePoints(arucoBoard, corners, ids, out objPoints, out imgPoints);
 			Cv2.SolvePnP(objPoints, imgPoints, webCamera.cameraMatrix, webCamera.distCoeffsArray, out rvec, out tvec);
 		}
 	}
+
+    void estimateBoardAverage(){
+        if (markers.Count > 0)
+        {
+            List<Point3f> objPoints = new List<Point3f>();
+            List<Point2f> imgPoints = new List<Point2f>();
+            Vector3 average = Vector3.zero;
+            //Pass corners[0],corners[1], corners[2]....then pass these through solvepnp, then get average
+
+            for (int i = 0; i < corners.Length; i++){
+                double[] current_tvec;
+                double[] current_rvec;
+                getBoardObjectAndImagePoints(arucoBoard, new Point2f[][] { corners[i] }, new int[] { ids[i] }, out objPoints, out imgPoints);
+                Cv2.SolvePnP(objPoints, imgPoints, webCamera.cameraMatrix, webCamera.distCoeffsArray, out current_tvec, out current_rvec);
+                average += new Vector3((float)current_tvec[0], (float)current_tvec[1], (float)current_tvec[2]);
+            }
+
+            current_position_avg = average / corners.Length;
+            Debug.Log("AVERAGE:" + (average / corners.Length).ToString("F3"));
+        }
+    }
 
     void estimateSingleMarker(Marker marker)
     {

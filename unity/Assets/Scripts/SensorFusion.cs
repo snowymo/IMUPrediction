@@ -14,9 +14,9 @@ public class SensorFusion : MonoBehaviour
     public int buttonIdx;
     //public GameObject arucoCube;
     public UnityEngine.UI.Text button4cmr;
-
     public bool positionTracking;
 
+    Quaternion rc;
 
     Quaternion unityToIphone(Quaternion q){
         return new Quaternion(-q.x, -q.y, q.z, q.w);
@@ -89,11 +89,19 @@ public class SensorFusion : MonoBehaviour
             Quaternion aruco_sign = new Quaternion(aruco_rot.x,  -aruco_rot.z, -aruco_rot.y, -aruco_rot.w);
             Quaternion optical = aruco_sign * inv;
 
-            Quaternion old_orientation = this.transform.rotation;
+            Quaternion old_orientation = rc;
+            float t = Quaternion.Angle(old_orientation, optical) / 180.0f;
 
-            Debug.Log("ANGLE:" + Quaternion.Angle(old_orientation, aruco_sign));
-            Debug.Log("NORMALIZED:" + Quaternion.Angle(old_orientation, aruco_sign) / 180.0f);
-            transform.rotation = Quaternion.Slerp(old_orientation, optical, Quaternion.Angle(old_orientation, aruco_sign)) * imu_rot;
+            Debug.Log("Angle:" + Quaternion.Angle(prev_aruco, aruco_sign));
+            if (tracker.markerDetector.isTracked && Quaternion.Angle(prev_aruco, aruco_sign) < 45){
+                rc = Quaternion.Slerp(old_orientation, optical, t);
+                transform.rotation = rc * imu_rot;
+            }
+            else{
+                rc = old_orientation;
+                transform.rotation = rc * imu_rot;
+            }
+
 
             /*
             if (tracker.markerDetector.isTracked)
@@ -159,6 +167,7 @@ public class SensorFusion : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        rc = Quaternion.identity;
         buttonIdx = 0;
     }
 

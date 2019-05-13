@@ -29,6 +29,10 @@ public class Predictor : MonoBehaviour
     public GameObject world;
     public UDPReceiver receiver;
 
+    IMU Job;
+    JobHandle handle;
+    NativeArray<Quaternion> results;
+
 
     int iters = 0;
     float sumx = 0;
@@ -243,6 +247,9 @@ public class Predictor : MonoBehaviour
             calculated_pose =  calculated_pose * (imuquat);
             world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
             output_rot.text = "IMU: "+world.transform.rotation.ToString();
+
+
+
 
 
 
