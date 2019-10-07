@@ -2,9 +2,25 @@
 using System.Collections.Generic;
 using UnityEngine;
 using MathNet.Numerics.LinearAlgebra;
+using UnityEngine.UI;
+using Unity.Jobs;
+using Unity.Collections;
+
+public struct IMU : IJob
+{
+
+    public NativeArray<Quaternion> result;
+
+    public void Execute()
+    {
+        //result[0] = a + b;
+        result[0] = Input.gyro.attitude;
+    }
+}
 
 public class Predictor : MonoBehaviour
 {
+
     List<KeyValuePair<float, Vector3>> gyro_history;
     List<KeyValuePair<float, Vector3>> gyro_predictions;
     private static float NS2S = 1.0f / 1000000000.0f;
@@ -12,6 +28,12 @@ public class Predictor : MonoBehaviour
     private float timestamp2;
     public GameObject world;
     public UDPReceiver receiver;
+
+    IMU Job;
+    JobHandle handle;
+    NativeArray<Quaternion> results;
+
+
     int iters = 0;
     float sumx = 0;
     float sumy = 0;
@@ -19,17 +41,19 @@ public class Predictor : MonoBehaviour
 
     //Drift factor
     //float x_const = -0.0007957f;
-    float x_const = -0.0008073f;
+    float x_const = -0.09709864f;
     //float y_const = -0.0004028f;
-    float y_const = -0.0003908f;
-    float z_const = -0.0000354f;
+    float y_const = -0.04644096f;
+    float z_const = -0.003673066f;
 
     public int history_length = 15;
     public float lag = 0.03f;
 
     float last_time = 0f;
 
-    Quaternion calculated_pose, headset_pose;
+    public Text output_rot;
+
+    public Quaternion calculated_pose, headset_pose;
     // Start is called before the first frame update
     void Start()
     {
@@ -122,13 +146,13 @@ public class Predictor : MonoBehaviour
 
 
     public Quaternion GyroToQuat(KeyValuePair<float,Vector3> gyroData, bool drift){
-        Vector3 gyro = gyroData.Value;
+        Vector3 gyro = new Vector3(gyroData.Value.x - x_const, gyroData.Value.y - y_const, gyroData.Value.z - z_const);
+
         //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.z, gyroData.Value.x);//correct
         //Vector3 gyro = new Vector3(gyroData.Value.y, gyroData.Value.x, gyroData.Value.z);
         //Vector3 gyro = new Vector3(gyroData.Value.x, gyroData.Value.z, gyroData.Value.y);
         //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.x, gyroData.Value.y);
         //Vector3 gyro = new Vector3(gyroData.Value.z, gyroData.Value.y, gyroData.Value.x);
-        Debug.Log("test1:" + gyro);
         float event_time = gyroData.Key;
         Quaternion rotation;
         if(timestamp != 0){
@@ -145,7 +169,7 @@ public class Predictor : MonoBehaviour
             float cosThetaOverTwo = Mathf.Cos(thetaOverTwo);
             //Debug.Log("Quat");
             //Debug.Log(sinThetaOverTwo * gyro.x + " " + sinThetaOverTwo * gyro.y + " " + sinThetaOverTwo * gyro.z + " " + cosThetaOverTwo);
-            Vector3 v = new Vector3(sinThetaOverTwo * gyro.x - x_const, sinThetaOverTwo * gyro.y - y_const, sinThetaOverTwo * gyro.z - z_const);
+            Vector3 v = new Vector3(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z);
             //Vector3 v = new Vector3(sinThetaOverTwo * gyro.x, sinThetaOverTwo * gyro.y, sinThetaOverTwo * gyro.z);
             //v.x *= -1;
             //v.y *= -1;
@@ -208,7 +232,7 @@ public class Predictor : MonoBehaviour
 
     //Quaternion iphone2unityQuat = Quaternion.Euler(90,0,0) * Quaternion.Euler(0, 0, 90);
 
-    Quaternion iphone2unity(Quaternion q){
+    public Quaternion iphone2unity(Quaternion q){
         //return new Quaternion(q.y, -q.x, -q.z, -q.w);
         return new Quaternion(q.y, -q.z, q.x, -q.w);
     }
@@ -216,43 +240,26 @@ public class Predictor : MonoBehaviour
     {
         if (receiver.initiated)
         {
-            //Quaternion world_rotation = GyroToQuat(GetLatestPredictionPair(), true);
-            //world.transform.rotation *= RightHandToLeftHand(world_rotation);
 
-            Quaternion imuquat = ( GyroToQuat(GetLatestGyroDataPair(), true));
-            print("calculated_pose:" + calculated_pose.ToString("F3"));
-            print("imuquat:" + imuquat.ToString("F3"));
 
-            //calculated_pose = iphone2unity(imuquat) * calculated_pose;
+            //Quaternion imuquat = GyroToQuat(GetLatestGyroDataPair(), true);
+            Quaternion imuquat = GyroToQuat(GetLatestPredictionPair(), true);
             calculated_pose =  calculated_pose * (imuquat);
+            world.transform.rotation = Quaternion.Inverse(iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0)));
+            output_rot.text = "IMU: "+world.transform.rotation.ToString();
 
-            //world.transform.rotation = Quaternion.Inverse( headset_pose) * calculated_pose;// * world.transform.rotation;
-            //world.transform.rotation = calculated_pose;// * world.transform.rotation;
-            print("calculated_pose:" + calculated_pose.eulerAngles.ToString("F3"));
-            //world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0,45,0));
-            world.transform.rotation = iphone2unity(calculated_pose * Quaternion.Euler(0, -45, 0));
-            print("world.transform.rotation:" + world.transform.rotation.eulerAngles.ToString("F3"));
-            // tilt here as the last step
-            /*
-            baseline *= RightHandToLeftHand(TestGyroToQuat(GetLatestGyroDataPair()));
 
-            if (Input.GetKeyDown(KeyCode.Space))
-            {
-                Debug.Log("Baseline Quaternion:" + baseline.eulerAngles);
-                Debug.Log("Delta:" + (Quaternion.Inverse(prev_baseline) * baseline).eulerAngles);
 
-                prev_baseline = baseline;
-            }*/
 
-            /*
+
+
+            //Debug
             iters++;
+            sumx += GetLatestGyroDataPair().Value.x;
+            sumy += GetLatestGyroDataPair().Value.y;
+            sumz += GetLatestGyroDataPair().Value.z;
+            //Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
 
-            sumx += world_rotation.x;
-            sumy += world_rotation.y;
-            sumz += world_rotation.z;
-
-            Debug.Log("Average: x:" + sumx / (float)iters + " y:" + sumy / (float)iters + " z:" + sumz / (float)iters);
-            */
         }
     }
 }
