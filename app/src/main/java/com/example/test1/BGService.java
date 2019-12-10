@@ -30,7 +30,7 @@ public class BGService extends Service implements SensorEventListener {
     private SensorManager SM;
     private double timestamp;// in ms
 
-    private static final double SEND_RATE = 1.0 / 500.0;
+    private static final double SEND_RATE = 1.0 / 216.0;
 
     private float[] data;
 
@@ -96,7 +96,7 @@ public class BGService extends Service implements SensorEventListener {
 //                Matrix2Quaternion(mRotationMatrix);
             }
         }
-        data[7] = (float) event.timestamp / 1000000;// in ms
+        data[7] = (float) System.currentTimeMillis()/1000;// in ms
     }
 
     private static final float NS2S = 1.0f / 1000000000.0f;

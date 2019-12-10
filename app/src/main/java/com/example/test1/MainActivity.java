@@ -36,7 +36,7 @@ import static com.example.test1.R.*;
 
 public class MainActivity extends AppCompatActivity implements SensorEventListener, TextWatcher, CompoundButton.OnCheckedChangeListener {
 
-    private TextView duration, curT, gyroX, gyroY, gyroZ, rotX, rotY, rotZ, rotW;
+    private TextView duration, curT, fps, gyroX, gyroY, gyroZ, rotX, rotY, rotZ, rotW;
     private Sensor myGyroscope, myRotation;
     private SensorManager SM;
     private double timestamp;// in ms
@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         // Assign TextView
         duration = (TextView) findViewById(id.duration);
         curT = (TextView) findViewById(id.curT);
+        fps = (TextView) findViewById(id.fps);
         gyroX = (TextView) findViewById(id.gyroX);
         gyroY = (TextView) findViewById(id.gyroY);
         gyroZ = (TextView) findViewById(id.gyroZ);
@@ -80,7 +81,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         rotW = (TextView) findViewById(id.rotW);
 
         ipaddress = (TextView) findViewById(id.ipaddress);
-        ipaddress.setText("216.165.71.223");
+        ipaddress.setText("172.24.71.214");
         ipaddress.addTextChangedListener(this);
 
         udpSwitch = findViewById(id.udpSwitch);
@@ -95,7 +96,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
@@ -119,6 +119,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
         }
 
         duration.setText("duration: " + ((double) event.timestamp / 1000000000 - timestamp) + "ms");
+        fps.setText("fps: " + 1/((double) event.timestamp / 1000000000 - timestamp));
         timestamp = (double) event.timestamp / 1000000000;
 
         showCurrentDateTime(event.timestamp);
