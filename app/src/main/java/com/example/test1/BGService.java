@@ -33,6 +33,7 @@ public class BGService extends Service implements SensorEventListener {
     private static final double SEND_RATE = 1.0 / 216.0;
 
     private float[] data;
+    private String jsondata;
 
     public static InetAddress IPAddress;
     public static DatagramSocket client_socket;
@@ -96,7 +97,14 @@ public class BGService extends Service implements SensorEventListener {
 //                Matrix2Quaternion(mRotationMatrix);
             }
         }
-        data[7] = (float) System.currentTimeMillis()/1000;// in ms
+        long l1 = System.currentTimeMillis();
+        System.out.println(l1);
+        data[7] = (float) System.currentTimeMillis()/(float)1000;// in ms
+        System.out.println(data[7]);
+        jsondata = "{\"gyro\":[" +String.valueOf(data[0]) + "," + String.valueOf(data[1]) + "," + String.valueOf(data[2]) + "],"
+                + "\"rvec\":[" + String.valueOf(data[3]) + "," + String.valueOf(data[4]) + "," + String.valueOf(data[5])+ "," + String.valueOf(data[6]) + "],"
+                + "\"timestamp\":" + String.valueOf(l1)
+                + "}";
     }
 
     private static final float NS2S = 1.0f / 1000000000.0f;
@@ -239,7 +247,8 @@ public class BGService extends Service implements SensorEventListener {
 
                 @Override
                 public void run() {
-                    new SendTask().execute(data);
+                    //new SendFloatTask().execute(data);
+                    new SendStringTask().execute(jsondata);
                 }
 
             });

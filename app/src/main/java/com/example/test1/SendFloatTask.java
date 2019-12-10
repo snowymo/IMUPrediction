@@ -12,7 +12,7 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
 
-public class SendTask extends AsyncTask<float[], Void, Boolean> {
+public class SendFloatTask extends AsyncTask<float[], Void, Boolean> {
     public DatagramSocket getClient_socket() {
         return client_socket;
     }
@@ -55,6 +55,5 @@ public class SendTask extends AsyncTask<float[], Void, Boolean> {
             e.printStackTrace();
         }
         return true;
-
     }
 }
