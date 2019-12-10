@@ -38,7 +38,7 @@ public class SendStringTask extends AsyncTask<String, Void, Boolean> {
                 client_socket = BGService.client_socket;
             }
             IPAddress = MainActivity.IPAddress;
-            DatagramPacket send_packet = new DatagramPacket(encode(str[0]), str[0].length(), IPAddress, 12345);
+            DatagramPacket send_packet = new DatagramPacket(encode(str[0]), str[0].length(), IPAddress,  MainActivity.sendPort);
             client_socket.send(send_packet);
         } catch (UnknownHostException e) {
             e.printStackTrace();

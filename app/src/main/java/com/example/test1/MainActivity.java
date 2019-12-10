@@ -34,19 +34,20 @@ import java.nio.*;
 import static com.example.test1.R.*;
 
 
-public class MainActivity extends AppCompatActivity implements SensorEventListener, TextWatcher, CompoundButton.OnCheckedChangeListener {
+public class MainActivity extends AppCompatActivity implements SensorEventListener, CompoundButton.OnCheckedChangeListener {
 
     private TextView duration, curT, fps, gyroX, gyroY, gyroZ, rotX, rotY, rotZ, rotW;
     private Sensor myGyroscope, myRotation;
     private SensorManager SM;
     private double timestamp;// in ms
 
-    private TextView ipaddress;
+    private TextView ipaddress, tvPort;
     private Switch udpSwitch;
 
     public static float[] gyros, rot;
 
     public static InetAddress IPAddress;
+    public static int sendPort;
     Intent bgService;
 
     @Override
@@ -82,7 +83,41 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         ipaddress = (TextView) findViewById(id.ipaddress);
         ipaddress.setText("172.24.71.214");
-        ipaddress.addTextChangedListener(this);
+        ipaddress.addTextChangedListener(
+                new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) { }
+                    @Override
+                    public void afterTextChanged(Editable editable) {
+                        try {
+                            Log.d("ip",editable.toString());
+                            IPAddress = InetAddress.getByName(editable.toString());
+                        } catch (UnknownHostException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+        );
+
+        tvPort = (TextView) findViewById(id.port);
+        tvPort.setText("12345");
+        tvPort.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) { }
+            @Override
+            public void afterTextChanged(Editable editable) {
+                try {
+                    Log.d("port",editable.toString());
+                    sendPort = Integer.parseInt(editable.toString());
+                }catch(NumberFormatException nfe){
+                    System.out.println("NumberFormatException: " + nfe.getMessage());
+                }
+            }
+        });
 
         udpSwitch = findViewById(id.udpSwitch);
         udpSwitch.setOnCheckedChangeListener(this);
@@ -93,6 +128,7 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         try {
             IPAddress = InetAddress.getByName(ipaddress.getText().toString());
+            sendPort = Integer.parseInt(tvPort.getText().toString());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -157,26 +193,6 @@ public class MainActivity extends AppCompatActivity implements SensorEventListen
 
         super.onStop();
         getDelegate().onStop();
-    }
-
-    @Override
-    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-    }
-
-    @Override
-    public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-    }
-
-    @Override
-    public void afterTextChanged(Editable s) {
-        try {
-            Log.d("ip",s.toString());
-            IPAddress = InetAddress.getByName(s.toString());
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override

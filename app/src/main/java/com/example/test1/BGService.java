@@ -26,16 +26,16 @@ import static java.lang.Math.sqrt;
 
 public class BGService extends Service implements SensorEventListener {
 
-    private Sensor myGyroscope, myRotation;
+    private Sensor myGyroscope, myRotation, myAcc;
     private SensorManager SM;
     private double timestamp;// in ms
 
     private static final double SEND_RATE = 1.0 / 216.0;
 
-    private float[] data;
+    private float[] data, acc;
     private String jsondata;
 
-    public static InetAddress IPAddress;
+//    public static InetAddress IPAddress;
     public static DatagramSocket client_socket;
 
     boolean isStop;
@@ -95,13 +95,16 @@ public class BGService extends Service implements SensorEventListener {
 //                SensorManager.getRotationMatrixFromVector(
 //                        mRotationMatrix , event.values);
 //                Matrix2Quaternion(mRotationMatrix);
+            }else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+                acc[0] = event.values[0];
+                acc[1] = event.values[1];
+                acc[2] = event.values[2];
             }
         }
         long l1 = System.currentTimeMillis();
-        System.out.println(l1);
         data[7] = (float) System.currentTimeMillis()/(float)1000;// in ms
-        System.out.println(data[7]);
         jsondata = "{\"gyro\":[" +String.valueOf(data[0]) + "," + String.valueOf(data[1]) + "," + String.valueOf(data[2]) + "],"
+                +"\"acc\":[" +String.valueOf(acc[0]) + "," + String.valueOf(acc[1]) + "," + String.valueOf(acc[2]) + "],"
                 + "\"rvec\":[" + String.valueOf(data[3]) + "," + String.valueOf(data[4]) + "," + String.valueOf(data[5])+ "," + String.valueOf(data[6]) + "],"
                 + "\"timestamp\":" + String.valueOf(l1)
                 + "}";
@@ -208,16 +211,21 @@ public class BGService extends Service implements SensorEventListener {
     public void onCreate(){
         Log.d("service", "onCreate");
         data = new float[8+9];
+        acc = new float[3];
         isStop = false;
         // Create our Sensor Manager
         SM = (SensorManager) getSystemService(SENSOR_SERVICE);
         // Accelerometer Sensor
         myGyroscope = SM.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         myRotation = SM.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
+        myAcc = SM.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
 
         // Register sensor Listener
         SM.registerListener(this, myGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
         SM.registerListener(this, myRotation, SensorManager.SENSOR_DELAY_FASTEST);
+        SM.registerListener(this, myAcc, SensorManager.SENSOR_DELAY_FASTEST);
+
+        // do it in background
         if (client_socket == null) {
             try {
                 client_socket = new DatagramSocket(12345);

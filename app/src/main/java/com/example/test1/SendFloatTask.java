@@ -45,7 +45,7 @@ public class SendFloatTask extends AsyncTask<float[], Void, Boolean> {
                 client_socket = BGService.client_socket;
             }
             IPAddress = MainActivity.IPAddress;
-            DatagramPacket send_packet = new DatagramPacket(encode(floats[0]), floats[0].length * 4, IPAddress, 12345);
+            DatagramPacket send_packet = new DatagramPacket(encode(floats[0]), floats[0].length * 4, IPAddress, MainActivity.sendPort);
             client_socket.send(send_packet);
         } catch (UnknownHostException e) {
             e.printStackTrace();
