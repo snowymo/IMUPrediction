@@ -30,7 +30,7 @@ public class BGService extends Service implements SensorEventListener {
     private SensorManager SM;
     private double timestamp;// in ms
 
-    private static final double SEND_RATE = 1.0 / 216.0;
+    private static final double SEND_RATE = 1.0 / 72;
 
     private float[] data, acc;
     private String jsondata;
@@ -68,17 +68,17 @@ public class BGService extends Service implements SensorEventListener {
 
     @Override
     public void onSensorChanged(SensorEvent event) {
-
+        // calculate everything I need and the nsend
         if(!isStop) {
             if (event.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
                 data[0] = event.values[0];
                 data[1] = event.values[1];
                 data[2] = event.values[2];
                 calculateRotationByGyro(event);
-                float[] f= new float[9];
-                rotationCurrent.getValues(f);
-                for(int i = 0; i < 9; i++)
-                    data[i+8] = f[i];
+//                float[] f= new float[9];
+//                rotationCurrent.getValues(f);
+//                for(int i = 0; i < 9; i++)
+//                    data[i+8] = f[i];
                 //Log.d("service", "onSensorChanged");
             } else if (event.sensor.getType() == Sensor.TYPE_ROTATION_VECTOR) {
                 data[3] = event.values[0];
@@ -95,24 +95,31 @@ public class BGService extends Service implements SensorEventListener {
 //                SensorManager.getRotationMatrixFromVector(
 //                        mRotationMatrix , event.values);
 //                Matrix2Quaternion(mRotationMatrix);
-            }else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
+            }
+            else if (event.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
                 acc[0] = event.values[0];
                 acc[1] = event.values[1];
                 acc[2] = event.values[2];
+                CalculatePosByAcc(event);
+                long l1 = System.currentTimeMillis();
+                data[7] = (float) System.currentTimeMillis()/(float)1000;// in ms
+                jsondata = "{\"gyro\":[" +String.valueOf(data[0]) + "," + String.valueOf(data[1]) + "," + String.valueOf(data[2]) + "],"
+                        +"\"acc\":[" +String.valueOf(acc[0]) + "," + String.valueOf(acc[1]) + "," + String.valueOf(acc[2]) + "],"
+//                        + "\"rvec\":[" + String.valueOf(data[3]) + "," + String.valueOf(data[4]) + "," + String.valueOf(data[5])+ "," + String.valueOf(data[6]) + "],"
+                        + "\"rotation\":[" + String.valueOf(rotationCurrentFA[0]) + ","+ String.valueOf(rotationCurrentFA[1]) + ","+ String.valueOf(rotationCurrentFA[2]) + ","
+                        + String.valueOf(rotationCurrentFA[3]) + ","+ String.valueOf(rotationCurrentFA[4]) + ","+ String.valueOf(rotationCurrentFA[5]) + ","
+                        + String.valueOf(rotationCurrentFA[6]) + ","+ String.valueOf(rotationCurrentFA[7]) + ","+ String.valueOf(rotationCurrentFA[8]) + "],"
+                        + "\"pos\":[" + String.valueOf(position[0])+ "," + String.valueOf(position[1])+ ","+ String.valueOf(position[2])+ "],"
+                        + "\"timestamp\":" + String.valueOf(l1)
+                        + "}";
             }
         }
-        long l1 = System.currentTimeMillis();
-        data[7] = (float) System.currentTimeMillis()/(float)1000;// in ms
-        jsondata = "{\"gyro\":[" +String.valueOf(data[0]) + "," + String.valueOf(data[1]) + "," + String.valueOf(data[2]) + "],"
-                +"\"acc\":[" +String.valueOf(acc[0]) + "," + String.valueOf(acc[1]) + "," + String.valueOf(acc[2]) + "],"
-                + "\"rvec\":[" + String.valueOf(data[3]) + "," + String.valueOf(data[4]) + "," + String.valueOf(data[5])+ "," + String.valueOf(data[6]) + "],"
-                + "\"timestamp\":" + String.valueOf(l1)
-                + "}";
     }
 
     private static final float NS2S = 1.0f / 1000000000.0f;
     private final float[] deltaRotationVector = new float[4];
     Matrix rotationCurrent = new Matrix();
+    float[] rotationCurrentFA = new float[9];
     void calculateRotationByGyro(SensorEvent event){
         if (timestamp != 0) {
             final float dT = (float) ((event.timestamp - timestamp) * NS2S);
@@ -126,7 +133,7 @@ public class BGService extends Service implements SensorEventListener {
 
             // Normalize the rotation vector if it's big enough to get the axis
             // (that is, EPSILON should represent your maximum allowable margin of error)
-//            if (omegaMagnitude > EPSILON) {
+            //if (omegaMagnitude > EPSILON) {
 //                axisX /= omegaMagnitude;
 //                axisY /= omegaMagnitude;
 //                axisZ /= omegaMagnitude;
@@ -152,7 +159,47 @@ public class BGService extends Service implements SensorEventListener {
         Matrix deltaMatrix = new Matrix();
         deltaMatrix.setValues(deltaRotationMatrix);
         rotateMatrix(rotationCurrent, deltaMatrix);
+        rotationCurrent.getValues(rotationCurrentFA);
         Log.d("rotationCurrent", String.valueOf(rotationCurrent));
+    }
+
+    float[] last_values = null;
+    float[] velocity = null;
+    float[] position = {0,0,0};
+    float[] gravity = new float[3];
+    float[] linear_acceleration ={0,0,0};
+    long last_timestamp = 0;
+    void CalculatePosByAcc(SensorEvent event) {
+        if(last_values != null){
+            float dt = (event.timestamp - last_timestamp) * NS2S;
+
+            float alpha = 0.8f;
+
+            // Isolate the force of gravity with the low-pass filter.
+            gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+            gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+            gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+            // Remove the gravity contribution with the high-pass filter.
+            linear_acceleration[0] = event.values[0] - gravity[0];
+            linear_acceleration[1] = event.values[1] - gravity[1];
+            linear_acceleration[2] = event.values[2] - gravity[2];
+
+            for(int index = 0; index < 3;++index){
+                velocity[index] += (linear_acceleration[index] + last_values[index])/2 * dt;
+                position[index] += velocity[index] * dt;
+            }
+        }
+        else{
+            last_values = new float[3];
+            velocity = new float[3];
+            position = new float[3];
+            velocity[0] = velocity[1] = velocity[2] = 0f;
+            position[0] = position[1] = position[2] = 0f;
+            System.arraycopy(event.values, 0, gravity, 0, 3);
+        }
+        System.arraycopy(linear_acceleration, 0, last_values, 0, 3);
+        last_timestamp = event.timestamp;
     }
 
     void rotateMatrix(Matrix m1, Matrix m2){
