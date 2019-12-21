@@ -114,32 +114,51 @@ def viz_raw_data(points, ax, stime, color, marker = '.', size = 10):
     ax.scatter3D(points[:, 0], points[:, 1], points[:, 2],
                  color=color, marker = marker, s=size)
     ax.set_xlabel('X')
-    ax.set_zlabel('Y')
-    ax.set_ylabel('Z')
+    ax.set_zlabel('Z')
+    ax.set_ylabel('Y')
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--imu', type=str, default="imu", help='imu file')
-    parser.add_argument('--optitrack', type=str, default="optitrack", help='optitrack file')
+    parser.add_argument('--imu', type=str, default="imu-z", help='imu file')
+    parser.add_argument('--optitrack', type=str, default="optitrack-z", help='optitrack file')
     args = parser.parse_args()
     imu_data = np.loadtxt(args.imu + ".csv", delimiter=",")
     imu_handler = IMUHandler(imu_data[:,0:4],imu_data[:,[0,4,5,6]], imu_data[:,[0,7,8,9]],imu_data[:,[0,10,11,12,13,14,15,16,17,18]])
 
-    optitrack = np.loadtxt(args.optitrack + ".csv")[:3859]
+    optitrack = np.loadtxt(args.optitrack + ".csv")
 
     # visualize the pos and rvec
     fig = plt.figure()
+    # plt.axis('scaled')
     subax = fig.add_subplot(221, projection='3d')
+    subax.set_xlabel('X')
+    # subax.set_xlim([0, 0.4])
+    # subax.set_ylim([0, 0.4])
+    # subax.set_zlim([0, 0.4])
+    subax.set_zlabel('Z')
+    subax.set_ylabel('Y')
+    # subbx = fig.add_subplot(222, projection='3d')
     subbx = fig.add_subplot(222)
     subcx = fig.add_subplot(223)
     subdx = fig.add_subplot(224)
-    viz_raw_data(imu_handler.pos[:, 1:]+optitrack[0, 1:4], subax, None, "red")
-    viz_time_axis(imu_handler.pos[:, 0], imu_handler.pos[:, 1]+optitrack[0, 1], subbx, "red")
-    viz_time_axis(imu_handler.pos[:, 0], imu_handler.pos[:, 2]+optitrack[0, 2], subcx, "red")
-    viz_time_axis(imu_handler.pos[:, 0], imu_handler.pos[:, 3]+optitrack[0, 3], subdx, "red")
+    # imu_handler.pos = imu_handler.pos[200:]
+    imu_in_optitrack_axis = [imu_handler.pos[:, 1],imu_handler.pos[:, 3],-imu_handler.pos[:, 2]]
+    imu_in_optitrack_axis = np.asarray(imu_in_optitrack_axis)
+    imu_in_optitrack_axis = np.swapaxes(imu_in_optitrack_axis, 0, 1)
+    subax.scatter3D(imu_handler.pos[:, 3], imu_handler.pos[:, 1], imu_handler.pos[:, 2], color="red")
+    viz_time_axis(imu_handler.pos[:, 0]/1000.0, imu_handler.pos[:, 1], subbx, "red")
+    viz_time_axis(imu_handler.pos[:, 0]/1000.0, imu_handler.pos[:, 3], subcx, "red")
+    viz_time_axis(imu_handler.pos[:, 0]/1000.0, -imu_handler.pos[:, 2], subdx, "red")
 
-    viz_raw_data(optitrack[:, 1:4], subax, None, "green")
-    viz_time_axis(optitrack[:, 0], optitrack[:, 1], subbx, "green")
-    viz_time_axis(optitrack[:, 0], optitrack[:, 2], subcx, "green")
-    viz_time_axis(optitrack[:, 0], optitrack[:, 3], subdx, "green")
+    # viz_raw_data(optitrack[:, 1:4]-optitrack[0, 1:4], subax, None, "green")
+    subax.scatter3D(optitrack[:, 1]-optitrack[0, 1], optitrack[:, 2]-optitrack[0, 2], optitrack[:, 3]-optitrack[0, 3], color="green")
+    viz_time_axis(optitrack[:, 0], optitrack[:, 1]-optitrack[0, 1], subbx, "green")
+    viz_time_axis(optitrack[:, 0] , optitrack[:, 2] - optitrack[0, 2], subcx, "green")
+    viz_time_axis(optitrack[:, 0] , optitrack[:, 3] - optitrack[0, 3], subdx, "green")
+    # viz_time_axis(optitrack[:, 0]*1000, optitrack[:, 2]-optitrack[0, 2], subcx, "green")
+    # viz_time_axis(optitrack[:, 0]*1000, optitrack[:, 3]-optitrack[0, 3], subdx, "green")
     plt.show()
+    # imu opt
+    # x x
+    # y z
+    # z y

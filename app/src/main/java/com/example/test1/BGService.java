@@ -26,7 +26,7 @@ import static java.lang.Math.sqrt;
 
 public class BGService extends Service implements SensorEventListener {
 
-    private Sensor myGyroscope, myRotation, myAcc;
+    private Sensor myGyroscope, myRotation, myAcc, myLAcc;
     private SensorManager SM;
     private double timestamp;// in ms
 
@@ -100,7 +100,13 @@ public class BGService extends Service implements SensorEventListener {
                 acc[0] = event.values[0];
                 acc[1] = event.values[1];
                 acc[2] = event.values[2];
-                CalculatePosByAcc(event);
+//                CalculatePosByAcc(event);
+            }
+            else if (event.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
+                acc[0] = event.values[0];
+                acc[1] = event.values[1];
+                acc[2] = event.values[2];
+                CalculatePosByLAcc(event);
                 long l1 = System.currentTimeMillis();
                 data[7] = (float) System.currentTimeMillis()/(float)1000;// in ms
                 jsondata = "{\"gyro\":[" +String.valueOf(data[0]) + "," + String.valueOf(data[1]) + "," + String.valueOf(data[2]) + "],"
@@ -160,7 +166,7 @@ public class BGService extends Service implements SensorEventListener {
         deltaMatrix.setValues(deltaRotationMatrix);
         rotateMatrix(rotationCurrent, deltaMatrix);
         rotationCurrent.getValues(rotationCurrentFA);
-        Log.d("rotationCurrent", String.valueOf(rotationCurrent));
+//        Log.d("rotationCurrent", String.valueOf(rotationCurrent));
     }
 
     float[] last_values = null;
@@ -173,7 +179,7 @@ public class BGService extends Service implements SensorEventListener {
         if(last_values != null){
             float dt = (event.timestamp - last_timestamp) * NS2S;
 
-            float alpha = 0.8f;
+            float alpha = 0.8f;//event.timestamp*NS2S / (event.timestamp*NS2S + dt);//alpha = t / (t + dT)
 
             // Isolate the force of gravity with the low-pass filter.
             gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
@@ -184,6 +190,7 @@ public class BGService extends Service implements SensorEventListener {
             linear_acceleration[0] = event.values[0] - gravity[0];
             linear_acceleration[1] = event.values[1] - gravity[1];
             linear_acceleration[2] = event.values[2] - gravity[2];
+            Log.d("linear_acceleration", String.valueOf(linear_acceleration));
 
             for(int index = 0; index < 3;++index){
                 velocity[index] += (linear_acceleration[index] + last_values[index])/2 * dt;
@@ -199,6 +206,28 @@ public class BGService extends Service implements SensorEventListener {
             System.arraycopy(event.values, 0, gravity, 0, 3);
         }
         System.arraycopy(linear_acceleration, 0, last_values, 0, 3);
+        last_timestamp = event.timestamp;
+    }
+
+    void CalculatePosByLAcc(SensorEvent event) {
+        if(last_values != null){
+            float dt = (event.timestamp - last_timestamp) * NS2S;
+
+            Log.d("linear_acceleration", String.valueOf(event.values));
+
+            for(int index = 0; index < 3;++index){
+                velocity[index] += (event.values[index] + last_values[index])/2 * dt;
+                position[index] += velocity[index] * dt;
+            }
+        }
+        else{
+            last_values = new float[3];
+            velocity = new float[3];
+            position = new float[3];
+            velocity[0] = velocity[1] = velocity[2] = 0f;
+            position[0] = position[1] = position[2] = 0f;
+        }
+        System.arraycopy(event.values, 0, last_values, 0, 3);
         last_timestamp = event.timestamp;
     }
 
@@ -266,11 +295,13 @@ public class BGService extends Service implements SensorEventListener {
         myGyroscope = SM.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
         myRotation = SM.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
         myAcc = SM.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        myLAcc = SM.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
 
         // Register sensor Listener
         SM.registerListener(this, myGyroscope, SensorManager.SENSOR_DELAY_FASTEST);
         SM.registerListener(this, myRotation, SensorManager.SENSOR_DELAY_FASTEST);
         SM.registerListener(this, myAcc, SensorManager.SENSOR_DELAY_FASTEST);
+        SM.registerListener(this, myLAcc, SensorManager.SENSOR_DELAY_FASTEST);
 
         // do it in background
         if (client_socket == null) {
