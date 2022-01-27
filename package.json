@@ -6,6 +6,6 @@
       "minimist": "1.2.0",
       "regression": "2.0.1",
       "quaternion": "1.0.5",
-      "three": "0.100.0"
+      "three": "0.137.0"
    }
 }
