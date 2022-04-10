@@ -3,7 +3,7 @@
    "version": "0.0.1",
    "dependencies": {
       "log-timestamp": "^0.2.1",
-      "minimist": "1.2.0",
+      "minimist": "1.2.6",
       "regression": "2.0.1",
       "quaternion": "1.0.5",
       "three": "0.100.0"
